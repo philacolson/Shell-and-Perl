@@ -1,0 +1,56 @@
+#!/bin/sh
+
+## this version is for hg19 coordinates
+SAMPLE_LIST=$1
+DISEASE_CODE=$2
+
+SCRIPT_DIR=/user/songliu/u2/group/Qiang/Exome/scripts/snp_postprocess/snv_postprocess
+PROGRAM=${SCRIPT_DIR}/check_all_snv_site
+BAM_FILE_DIR=/user/songliu/u2/group/Qiang/Exome/bladder_output/${DISEASE_CODE}
+#BAM_FILE_DIR=/user/songliu/u2/group/Qiang/Exome/bladder_output/BAM
+BAM_VIEW_SCRIPT=${SCRIPT_DIR}/TabToExcel.sh
+
+for i in `cat ${SAMPLE_LIST}`; do
+  echo $i
+  D_BAM=`ls ${BAM_FILE_DIR}/${i}_D*.bam`
+  G_BAM=`ls ${BAM_FILE_DIR}/${i}_G*.bam`
+  CK_FILE=${i}_tier1_check.lst
+  OUTPUT_FILE=${i}_report.txt
+
+  SAMPLE_NAME=${i}
+  SNV_CHECK_REPORT_FILE=${OUTPUT_FILE}
+
+  
+  echo "${PROGRAM} ${CK_FILE} ${D_BAM} ${G_BAM} ${SNV_CHECK_REPORT_FILE}"
+  ${PROGRAM} ${CK_FILE} ${D_BAM} ${G_BAM} ${SNV_CHECK_REPORT_FILE}
+
+  grep Found ${SNV_CHECK_REPORT_FILE} |grep -v NotFound |cut -f1,2 >keep.lst
+
+
+  grep GeneName ${SAMPLE_NAME}_tier1_putative_mutation.txt |sed /$/s//""State/ |sed /WU_HG18_Pos/s//WU_HG19_Pos/>${SAMPLE_NAME}_tier1_putative_mutation.txt.temp
+  grep Found ${SNV_CHECK_REPORT_FILE} |grep -v NotFound |sed /\=/s//\\\t/ |awk '{if($5 <=1) print $0}' |sort +4 -5 -n |cut -f1,2  >current.lst
+  if test -s current.lst
+  then
+    fgrep -f current.lst ${SAMPLE_NAME}_tier1_putative_mutation.txt |sed /$/s//\\tGood/ >>${SAMPLE_NAME}_tier1_putative_mutation.txt.temp
+  fi
+  grep Found ${SNV_CHECK_REPORT_FILE} |grep -v NotFound |sed /\=/s//\\\t/ |awk '{if($5 ==2) print $0}' |sort +4 -5 -n |cut -f1,2  >current.lst
+  if test -s current.lst
+  then
+    fgrep -f current.lst ${SAMPLE_NAME}_tier1_putative_mutation.txt |sed /$/s//\\t2SNP/ >> ${SAMPLE_NAME}_tier1_putative_mutation.txt.temp
+  fi
+
+  grep Found ${SNV_CHECK_REPORT_FILE} |grep -v NotFound |sed /\=/s//\\\t/ |awk '{if($5 >2) print $0}' |sort +4 -5 -n |cut -f1,2  >current.lst
+  if test -s current.lst
+  then
+    fgrep -f current.lst ${SAMPLE_NAME}_tier1_putative_mutation.txt |sed /$/s//\\tSNPCluster/ >> ${SAMPLE_NAME}_tier1_putative_mutation.txt.temp
+  fi
+  fgrep -f keep.lst -v ${SAMPLE_NAME}_tier1_putative_mutation.txt |grep -v GeneName |sed /$/s//\\tBad/ >>${SAMPLE_NAME}_tier1_putative_mutation.txt.temp
+  mv ${SAMPLE_NAME}_tier1_putative_mutation.txt ${SAMPLE_NAME}_tier1_putative_mutation.txt.original
+  mv ${SAMPLE_NAME}_tier1_putative_mutation.txt.temp ${SAMPLE_NAME}_tier1_putative_mutation.txt
+
+##  java -jar /nfs_exports/apps/gnu-apps/NextGen/stjude_java/TabToExcel.jar ${SAMPLE_NAME}_tier1_putative_mutation.txt ${D_BAM} ${G_BAM}
+
+  echo "${BAM_VIEW_SCRIPT} -s ${SAMPLE_NAME}_tier1_putative_mutation.txt -d ${D_BAM} -g ${G_BAM} -hg19"
+  ${BAM_VIEW_SCRIPT} -s ${SAMPLE_NAME}_tier1_putative_mutation.txt -d ${D_BAM} -g ${G_BAM} -hg19
+done
+

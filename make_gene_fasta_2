@@ -1,0 +1,103 @@
+#!/bin/sh
+## this program build a fasta file based on the gene name stored in geneName2geneID.map
+ROOT_DIR=$1
+INPUT_GENE2CHR_LIST=$2  ## use Gene|Chr
+ERR_REPORT_FILE=$3
+
+## the NCBI human_gene2refseq are located
+##NEXTGEN_BIN_ROOT_DIR=/nfs_exports/apps/internal/scripts
+
+NEXTGENE_SUPPORT_DIR=/user/songliu/u2/group/Qiang/Exome/scripts/snp_postprocess/snv_postprocess
+GENE_EXON_DIR=${NEXTGENE_SUPPORT_DIR}/GENE_EXON_REGION
+HG_FASTA_DIR=${NEXTGENE_SUPPORT_DIR}/fasta   ## need to use the hg19 just to avoid complexity of title line etc that may affect prt_seqloc
+
+NEXTGEN_BIN_ROOT_DIR=/user/songliu/u2/group/Qiang/Exome/scripts/snp_postprocess/snv_postprocess
+PERLSRC=${NEXTGEN_BIN_ROOT_DIR}/perlsrc
+FIND_SUB=${PERLSRC}/FindSub.pl
+
+SNPDetector_DIR=${NEXTGEN_BIN_ROOT_DIR}/SNPdetector
+BIN_DIR=${SNPDetector_DIR}/LINUX/src
+WRITE_FETCH_FILE=${BIN_DIR}/write_fetch_file
+PRT_SEQLOC=${BIN_DIR}/prt_seqloc
+STRIP_LINE=${BIN_DIR}/strip_line
+
+
+
+
+
+if test ! -s ${INPUT_GENE2CHR_LIST}
+then
+  echo "Fail to find the gene2chr file ${INPUT_GENE2CHR_LIST}"
+  exit 1
+fi
+
+if test ! -d ${GENE_EXON_DIR}
+then
+  echo "Fail to find the gene2exon dir ${GENE_EXON_DIR}"
+  exit 1
+fi
+
+
+cd ${ROOT_DIR}
+cut -f2 -d"|" ${INPUT_GENE2CHR_LIST} |sort -u >${INPUT_GENE2CHR_LIST}_chr.lst
+for i in `cat ${INPUT_GENE2CHR_LIST}_chr.lst`; do
+  if test ! -s ${GENE_EXON_DIR}/${i}_region.txt
+  then
+    echo "Fail to find region ${GENE_EXON_DIR}/${i}_region.txt"
+  else
+    grep $i$ ${INPUT_GENE2CHR_LIST} |cut -f1 -d"|" |sort -u >current_gene.lst
+    ${FIND_SUB} -i ${GENE_EXON_DIR}/${i}_region.txt -c current_gene.lst -t 1 -d '\t' -n 0 -o current_gene.lst.out
+    if test -s current_gene.lst.out
+    then
+      sort +0 -1 current_gene.lst.out >current_gene.lst.out.sort
+      mv current_gene.lst.out.sort current_gene.lst.out
+      awk 'BEGIN{start=-1; stop=-1; new_gene="xxx"}{if(index($1, new_gene) == 0 || index(new_gene, $1) ==0) {if(start !=-1) printf("%s|%ld|%ld|+\n", new_gene, start, stop); new_gene=$1; start=$5; stop=$6;} else {if($5 < start) start=$5; if($6 >stop) stop=$6; }}END{printf("%s|%ld|%ld|+\n", new_gene, start, stop)}' current_gene.lst.out >seqloc_all.lst
+      for j in `cat seqloc_all.lst`; do
+        cd ${ROOT_DIR}
+        GENE_NAME=`echo $j |cut -f1 -d"|"`
+        chr_from=`echo $j |cut -f2 -d"|" |awk '{printf("%ld", $1-2000)}'`
+        chr_to=`echo $j |cut -f3 -d"|" |awk '{printf("%ld", $1+2000)}'`
+        chr=$i
+        if test ! -d ${GENE_NAME}
+        then
+          mkdir ${GENE_NAME}
+        fi
+
+## extract the Refseq that match the gene_id from human_gene2refseq
+        cd ${GENE_NAME}
+        ${WRITE_FETCH_FILE} -d ${HG_FASTA_DIR}/.fa
+        echo ">${GENE_NAME} hg18_dna range=${chr}:${chr_from}-${chr_to} 5'pad=0 3'pad=0 revComp=FALSE strand=? repeatMasking=none" >test.seq
+        if test seqloc.lst
+        then
+          rm seqloc.lst
+        fi
+
+        echo "${i}|$chr_from|$chr_to|+" >seqloc.lst
+        ${PRT_SEQLOC} -i seqloc.lst -d ./ -b T
+        if test ! -s ${i}.seq
+        then
+          echo "Fail in ${PRT_SEQLOC} -i seqloc.lst -d ./ -b T for ${GeneName}"
+          exit 1
+        fi
+        ${STRIP_LINE} -i ${i}.seq -o stdout>>test.seq
+        rm ${i}.seq
+        mv test.seq ${GENE_NAME}.seq
+
+        if test ! -s ${GENE_NAME}.seq
+        then
+          echo "Fail to get sequence for prt_seqloc -i seqloc.lst -d ./ -b T for ${GeneName}"
+          echo "Fail to get sequence for prt_seqloc -i seqloc.lst -d ./ -b T for ${GeneName}" >>${ERR_REPORT_FILE}
+
+        else
+## new code. check to make sure that there is no garbage title line from UCSC
+          head -n 1 ${GENE_NAME}.seq |grep "^>" >k
+          if test ! -s k
+          then
+            ${STRIP_LINE} -i ${GENE_NAME}.seq -o ${GENE_NAME}.seq.mod
+            mv ${GENE_NAME}.seq.mod ${GENE_NAME}.seq
+          fi
+        fi
+      done
+    fi
+  fi
+done

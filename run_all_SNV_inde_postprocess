@@ -1,0 +1,55 @@
+#!/bin/sh
+INPUT_SAMPLE_LIST=$1 #list of chromosomes to test
+DISEASE_CODE=$2
+##BAM_DIR=/nfs_exports/genomes/1/PCGP/BucketRaw/${DISEASE_CODE}
+BAM_DIR=/user/songliu/u2/group/Qiang/Exome/bladder_output/${DISEASE_CODE}
+
+##SCRIPT_DIR=/nfs_exports/apps/internal/scripts
+SCRIPT_DIR=/user/songliu/u2/group/Qiang/Exome/scripts/snp_postprocess/snv_postprocess
+
+
+FILTER_DBSNP=$SCRIPT_DIR/filter_low_quality_dbSNP_4_tier1 
+#this guy is a program FIXME and is not passed any parameters which seems odd
+
+
+##EXCEL_ROOT_DIR=/nfs_exports/linux-file1/home/naevegrp/jzhang2/NextGen/PCGP
+EXCEL_ROOT_DIR=/user/songliu/u2/group/Qiang/Exome/bladder_output/EXCEL
+
+for i in `cat ${INPUT_SAMPLE_LIST}`; do
+  if test ! -d ${EXCEL_ROOT_DIR}/${i} #if there is no directory for the SNP
+  then
+    echo "no dir for ${EXCEL_ROOT_DIR}/${i}"
+    mkdir -p ${EXCEL_ROOT_DIR}/${i}
+    #exit 1
+  fi
+done
+
+for i in `cat ${INPUT_SAMPLE_LIST}`; do
+  echo $i
+  cp ../${i}_G_bam.out .
+  cp ../${i}_bam_low.out ${i}_bam_low.out
+  cp ../${i}_bam_high_20.out ${i}_bam_high_20.out
+  echo "${SCRIPT_DIR}/run_somatic_mutation_analysis ${i} no_false_snp"
+  #hq
+  D_BAM=`ls ${BAM_DIR}/${i}_D*.bam`
+  G_BAM=`ls ${BAM_DIR}/${i}_G*.bam`
+  ${SCRIPT_DIR}/run_somatic_mutation_analysis ${i} no_false_snp ${D_BAM} ${G_BAM}
+done
+
+echo "${SCRIPT_DIR}/run_check_snv_script ${INPUT_SAMPLE_LIST} ${DISEASE_CODE}"
+${SCRIPT_DIR}/run_check_snv_script ${INPUT_SAMPLE_LIST} ${DISEASE_CODE}
+
+for i in `cat ${INPUT_SAMPLE_LIST}`; do
+  echo $i
+  SAMPLE_NAME=$i
+  echo "${FILTER_DBSNP} $i ${DISEASE_CODE} hg19"
+
+  ${FILTER_DBSNP} $i ${DISEASE_CODE} hg19
+  cp ${i}_tier1_putative_mutation.xls $EXCEL_ROOT_DIR/${i}/.
+  
+  D_BAM_FILE=`ls ${BAM_DIR}/${SAMPLE_NAME}_D*.bam`
+  G_BAM_FILE=`ls ${BAM_DIR}/${SAMPLE_NAME}_G*.bam`
+  echo "${SAMPLE_NAME}_D|${D_BAM_FILE}|${G_BAM_FILE}" >${SAMPLE_NAME}_bam_file_info.lst
+  echo "${SCRIPT_DIR}/run_coding_indel_analysis_mod ${SAMPLE_NAME}  ${DISEASE_CODE} `pwd`/${SAMPLE_NAME}_bam_file_info.lst `pwd`"
+  ${SCRIPT_DIR}/run_coding_indel_analysis_mod ${SAMPLE_NAME}  ${DISEASE_CODE} `pwd`/${SAMPLE_NAME}_bam_file_info.lst `pwd`
+done

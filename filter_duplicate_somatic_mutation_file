@@ -1,0 +1,51 @@
+#!/bin/sh
+
+INPUT_FILE=$1
+OUTPUT_FILE=$2
+
+if test ! -s ${INPUT_FILE}
+then
+  echo "Fail to find input file ${INPUT_FILE}"
+  exit 1
+fi
+
+cut -f4,5 ${INPUT_FILE} |sort |uniq -d >d
+if test ! -s d
+then
+  echo "No duplicate record in ${INPUT_FILE}"
+############ Added by Xiang Chen 09082010###############
+  cp ${INPUT_FILE} ${OUTPUT_FILE}
+############ Adding completed############################
+  exit 1
+fi
+
+fgrep -f d -v ${INPUT_FILE} >${INPUT_FILE}.clean
+awk '{printf("%s|%s\n", $1, $2)}' d >d.lst
+for i in `cat d.lst`; do
+ chr=`echo $i |cut -f1 -d "|"`
+ pos=`echo $i |cut -f2 -d "|"`
+ grep $pos ${INPUT_FILE} |grep $chr |head -1 >>${INPUT_FILE}.clean 
+done
+
+original_count=`cut -f4,5 ${INPUT_FILE} |sort -u |wc |awk '{printf("%ld", $1)}'`
+clean_count=`cut -f4,5 ${INPUT_FILE}.clean |sort -u |wc |awk '{printf("%ld", $1)}'`
+
+if test ${original_count} != ${clean_count}
+then
+  echo "Fail in remove duplicate: original=${original_count}; clean=${clean_count}"
+  exit 1
+fi
+
+cut -f4,5 ${INPUT_FILE} |sort -u >x
+cut -f4,5 ${INPUT_FILE}.clean |sort >y
+diff x y >diff.out
+if test -s diff.out
+then
+  echo "Fail in maintaining identical genome interval. check files x and y"
+  exit 1
+fi
+
+rm x y diff.out
+rm d.lst
+cp ${INPUT_FILE}.clean ${OUTPUT_FILE}
+rm ${INPUT_FILE}.clean

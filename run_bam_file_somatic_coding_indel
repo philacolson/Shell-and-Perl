@@ -1,0 +1,198 @@
+#!/bin/sh
+
+## this program goes through the indels created by Mike's program trying to find
+## all coding, somatic indels created by either the low or high bam files and then 
+## run the auto_review_NextGen_indel program to find out which ones are real
+## this is a last attempt to rescue as many good indel as possible
+## it builds up the chr[x]_pos.lst file for each chromosome so that verify_Nextgen_indel can be run on these indels
+## add the step for dbSNP overlap check
+## add a step for collecting indels with the matching normal not equal to 0. It requires t/n >5 and fisher's exact test <0.001 for large indels and <0.01 for small indels
+
+DONOR_NAME=$1  ## e.g. SJMB001
+DISEASE_CODE=$2  ## e.g. SJMB
+BAM_SNP_INDEL_FILE_LIST=$3  ##e.g. all the bam files that were used to prepare this input
+SAMPLE_INFO_FILE=$4
+
+NORMAL_SAMPLE_HAS_CONTAMINATION=1  ## this will collect additional indels where the reference_tumor_count
+
+ROOT_PATH=/nfs_exports/genomes/1/PCGP/BucketIntermediate
+BAM_DIR=/nfs_exports/genomes/1/PCGP/BucketRaw/${DISEASE_CODE}
+INDEL_PATH=${ROOT_PATH}/${DISEASE_CODE}/IndelAnalysis
+SNP_PATH=${ROOT_PATH}/${DISEASE_CODE}/SnpDetect
+
+NEXTGEN_ROOT_DIR=/user/songliu/u2/group/Qiang/Exome/scripts/snp_postprocess/snv_postprocess
+FILTER_MIKE_INDEL=${NEXTGEN_ROOT_DIR}/filter_mike_snp_indel
+
+NEXTGEN_BIN_ROOT_DIR=/user/songliu/u2/group/Qiang/Exome/scripts/snp_postprocess/snv_postprocess
+PERLSRC_DIR=${NEXTGEN_BIN_ROOT_DIR}/perlsrc
+FIND_SUB=${PERLSRC_DIR}/FindSub.pl
+FisherTest=${PERLSRC_DIR}/fisherexact
+## AUTO_REVIEW_PROGRAM=${NEXTGEN_ROOT_DIR}/scripts4all/auto_review_NextGen_indel
+AUTO_REVIEW_PROGRAM=${NEXTGEN_BIN_ROOT_DIR}/auto_review_NextGen_indel
+
+ALL_CHR_FILE=${NEXTGEN_ROOT_DIR}/all_chr.lst
+## CDS_REGION_DIR=${NEXTGEN_ROOT_DIR}/CDS_EXON_REGION
+CDS_REGION_DIR=/user/songliu/u2/group/Qiang/Exome/scripts/snp_postprocess/snv_postprocess/CDS_EXON_REGION
+
+
+## need to do the export for running FisherTest
+export PERL5LIB=${NEXTGEN_BIN_ROOT_DIR}/MikePerl/FishPerl/Text-NSP-1.11
+
+
+if test ! -s ${SAMPLE_INFO_FILE}
+then
+  if test ! -d ${BAM_DIR}
+  then
+    echo "Fail to find bam diectory ${BAM_DIR}"
+    exit 1
+  fi
+fi
+
+
+if test ! -s ${BAM_SNP_INDEL_FILE_LIST}
+then
+  echo "Fail to find BAM_SNP_INDEL_FILE_LIST ${BAM_SNP_INDEL_FILE_LIST}"
+  exit 1
+fi
+
+for BAM_SNP_INDEL_FILE_NAME in `cat ${BAM_SNP_INDEL_FILE_LIST}`; do
+ if test -s ${BAM_SNP_INDEL_FILE_NAME}
+ then
+   MikeInputFile=${BAM_SNP_INDEL_FILE_NAME}
+ else
+   MikeInputFile=${SNP_PATH}/${BAM_SNP_INDEL_FILE_NAME}
+ fi
+ if test ! -s ${MikeInputFile}
+ then
+   echo "Fail to find input file ${MikeInputFile}"
+   exit 1
+ fi
+done
+
+if test ! -d ${INDEL_PATH}
+then
+  echo "Fail to find path ${INDEL_PATH}"
+  INDEL_PATH=`pwd`
+##  exit 1
+else
+  INDEL_PATH=`pwd`
+fi
+
+
+cd ${INDEL_PATH}
+
+TEMP_DIR=tempReview_${DONOR_NAME}
+if test -d ${TEMP_DIR}
+then
+  rm -rf ${TEMP_DIR}
+fi
+mkdir ${TEMP_DIR}
+
+cd ${TEMP_DIR}
+
+## no sample info file, create one here
+if test ! -s ${SAMPLE_INFO_FILE}
+then
+  SAMPLE_INFO_FILE=`pwd`/${DONOR_NAME}_sample_bam_info.txt
+  if test -s ${SAMPLE_INFO_FILE}
+  then
+    rm ${SAMPLE_INFO_FILE}
+  fi
+  count=`ls ${BAM_DIR}/${DONOR_NAME}_D-*.bam |wc|awk '{printf("%s", $1)}'`
+  if test $count != 1 
+  then
+    echo "fail to generate ${DONOR_NAME}_sample_bam_info.txt. tumor_count=$count in ${BAM_DIR}/${DONOR_NAME}_D-*.bam"
+    exit 1
+  fi
+  tumor_bam_file=`ls ${BAM_DIR}/${DONOR_NAME}_D-*.bam`
+
+  count=`ls ${BAM_DIR}/${DONOR_NAME}_G-*.bam |wc|awk '{printf("%s", $1)}'`
+  if test $count != 1 
+  then
+    echo "fail to generate ${DONOR_NAME}_sample_bam_info.txt. normal_count=$count in ${BAM_DIR}/${DONOR_NAME}_G-*.bam"
+    exit 1
+  fi
+  normal_bam_file=`ls ${BAM_DIR}/${DONOR_NAME}_G-*.bam`
+
+  echo "${DONOR_NAME}_D|${tumor_bam_file}|${normal_bam_file}" >${SAMPLE_INFO_FILE}
+fi
+
+## create all the positions that show somatic indel
+## col12 is the count in normal
+for BAM_SNP_INDEL_FILE_NAME in `cat ${BAM_SNP_INDEL_FILE_LIST}`; do
+ if test -s ${BAM_SNP_INDEL_FILE_NAME}
+ then
+   MikeInputFile=${BAM_SNP_INDEL_FILE_NAME}
+ else
+   MikeInputFile=${SNP_PATH}/${BAM_SNP_INDEL_FILE_NAME}
+ fi
+
+## require reference_tumor_count=0
+ grep -v SNP ${MikeInputFile} |awk '{if($12 == 0) print $0}' >${MikeInputFile}.mod
+
+## add annotion site that may be missed by tumor-contamination in normal
+  if test ${NORMAL_SAMPLE_HAS_CONTAMINATION} = 1
+  then
+## require double-strand coverage $6 == 1. This may result in false negative but...
+## requires the tumor_allele in reference count <5% and indel_in_tumor/indel_in_normal >5
+## requires the tumor coverage <200 and normal coverage <200 to avoid gettign a lot of repeats
+##    grep -v SNP ${MikeInputFile} |cut -f1,12-15,18 |awk '{if($6 ==1) printf("%s\t%s\t%s\t%s\t%s\n", $1, $5, $3, $4, $2)}' |awk '{if($4 >0 && $5 >=20 && $4*100/$5 <=5 && $2/$4 >=5 && $3 <200 && $5 <200) print $0}' >input_indel_4_fisher.txt
+    echo "before fihser ${MikeInputFile}"
+    grep -v SNP ${MikeInputFile} |cut -f1,12-15,18 |awk '{if($6 ==1) printf("%s\t%s\t%s\t%s\t%s\n", $1, $5, $3, $4, $2)}' |awk '{if(i$2 > 0 && $4 >0 && $5 >=10 && (($4*100/$5 <=10 && $2/$4 >=5) || ($2*100/($2+$3) >=75 && $4*100/($4+$5) <=15)) && $3 <400 && $5 <400) print $0}' >input_indel_4_fisher.txt
+    echo "after fisher"
+    if test -s input_indel_4_fisher.txt
+    then
+      cat input_indel_4_fisher.txt |${FisherTest} >indel_fisher_output.txt
+      if test -s indel_fisher_output.txt
+      then
+       awk '{if($1 <=0.001) printf("%s\n", $2)}' indel_fisher_output.txt >high_confidence_site.lst
+       awk '{if($1 <=0.01 && $1 >0.001 ) printf("%s\n", $2)}' indel_fisher_output.txt >low_confidence_site.lst
+       if test -s high_confidence_site.lst
+       then
+         ${FIND_SUB} -i ${MikeInputFile} -c high_confidence_site.lst -t 1 -d '\t' -n 0 -o high_confidence_site.lst.out
+         if test -s high_confidence_site.lst.out
+         then
+           grep -v SNP high_confidence_site.lst.out >>${MikeInputFile}.mod
+         fi
+
+## low-confidence just takes those that have small indel (<=2bp) to avoid too much false positives
+         ${FIND_SUB} -i  ${MikeInputFile} -c low_confidence_site.lst -t 1 -d '\t' -n 0 -o low_confidence_site.lst.out
+         if test -s low_confidence_site.lst.out
+         then
+           grep -v SNP low_confidence_site.lst.out |awk '{if($5 <=2) print $0}' >>${MikeInputFile}.mod
+         fi
+       fi
+      fi
+    fi
+  fi
+
+
+ echo "${FILTER_MIKE_INDEL} ${MikeInputFile}.mod ${ALL_CHR_FILE} ${CDS_REGION_DIR} `pwd`/mike_snp_output.txt `pwd`/mike_indel_output.txt"
+ ${FILTER_MIKE_INDEL} ${MikeInputFile}.mod ${ALL_CHR_FILE} ${CDS_REGION_DIR} `pwd`/mike_snp_output.txt `pwd`/mike_indel_output.txt
+
+ if test  -s mike_indel_output.txt
+ then
+   awk '{if($3 >150) printf("%s|%s\n", $2, $3)}' mike_indel_output.txt >>bam_indel_pos.lst
+ fi
+done
+
+if test ! -s bam_indel_pos.lst
+then
+  echo "Fail to generate outptu file bam_indel_pos.lst"
+  echo "check program ${FILTER_MIKE_INDEL} ${MikeInputFile}.mod ${ALL_CHR_FILE} ${CDS_REGION_DIR} `pwd`/mike_snp_output.txt `pwd`/mike_indel_output.txt"
+  exit 1
+fi
+
+## only chr.lst is not allowed to have chr. bam_indel_pos.lst is expected to have the chr prefix
+cut -f1 -d"|" bam_indel_pos.lst |sort -u |sed /^chr/s///g>chr.lst
+
+
+echo "${AUTO_REVIEW_PROGRAM} `pwd`/chr.lst ${SAMPLE_INFO_FILE} `pwd` `pwd`/bam_indel_pos.lst 1 `pwd`"
+
+## need documentation
+${AUTO_REVIEW_PROGRAM} `pwd`/chr.lst ${SAMPLE_INFO_FILE} `pwd` `pwd`/bam_indel_pos.lst 1 `pwd`
+
+## /nfs_exports/genomes/1/PCGP/BucketIntermediate/SJTALL/IndelAnalysis/Velvet_trim_unmapped_k21 /nfs_exports/genomes/1/PCGP/BucketIntermediate/SJTALL/IndelAnalysis/tempReview_SJTALL005/bam_indel_pos.lst 1 /nfs_exports/genomes/1/PCGP/BucketIntermediate/SJTALL/IndelAnalysis/tempReview_SJTALL005
+
+## ${AUTO_REVIEW_PROGRAM} `pwd`/chr.lst `pwd`/sample_info.lst /nfs_exports/genomes/1/PCGP/BucketIntermediate/SJTALL/IndelAnalysis/Velvet_trim_unmapped_k21 `pwd`/SJTALL005.lst 1 `pwd`
+

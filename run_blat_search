@@ -1,0 +1,35 @@
+#!/bin/sh
+
+INPUT_FASTA=$1
+OUTPUT=$2
+USE_OOOC=$3
+
+NEXT_GEN_DIR=/user/songliu/u2/group/Qiang/Exome/reference/fasta
+HG_FASTA_DIR=/user/songliu/u2/group/Qiang/Exome/reference/fasta
+ALL_CHR_LIST=${NEXT_GEN_DIR}/all_chr.lst
+BLAT=~/group/Qiang/projects/RNA-seq/bin/linux.x86_64/blat
+
+if test -s ${OUTPUT}
+then
+  rm ${OUTPUT}
+fi
+
+for i in `cat ${ALL_CHR_LIST}`; do
+ if test -s ${OUTPUT}.temp
+ then
+   rm ${OUTPUT}.temp
+ fi
+
+ if test ${USE_OOOC} = 1
+ then
+   ${BLAT} ${HG_FASTA_DIR}/chr${i}.fa ${INPUT_FASTA} ${OUTPUT}.temp -ooc=${HG_FASTA_DIR}/11.ooc
+ else
+   ${BLAT} ${HG_FASTA_DIR}/chr${i}.fa ${INPUT_FASTA} ${OUTPUT}.temp
+ fi
+
+ if test -s ${OUTPUT}.temp
+ then
+   grep chr ${OUTPUT}.temp >>${OUTPUT}
+   rm ${OUTPUT}.temp
+ fi
+done

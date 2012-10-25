@@ -1,0 +1,454 @@
+#!/bin/sh
+## this program is a derivative of verify_Nextgen_indel. It only checks for regions where indels have already been identified and termed good
+## the input for this file is a list of chromosomal locations where the indels were found. Input file is in the format of chr|pos|del_len. The 3rd field can be empty
+## add 100bp to each end. 100 is the length of the reads
+## it re-constructs the consensus sequence by incorporating the indels into the reads
+## then re-align everyhing
+## then it uses the program ck_indel_in_NextGen to evaluate the consensus
+## all the reads that were mapped to the region of interest will be aligned regardless of whether they have the insertion/deletion mark
+## bam files were used for evaluating the reads
+## this was meant to replace manual review by using the bam file
+## the reads from the bam files were extracted by the following method: a) create a minibam by using the view function in samtools; b) generate fastq by using picard library
+## The function was taken care of by the program fasta_from_bamfile
+## it also removes all the hits that have non-specific match within 100bp
+
+PROCESS_DIR=$1		##/lpg_work/TEMP/TCGA/NEXT_GEN
+## INPUT_CONTIG2MRNA_FILE=contig2mRNA.map	## contig2mRNA.map file with the following format NM_012432|NODE_79827_length_56_cov_5.303571
+CURRENT_FILE_NAME=$2  ## like xaa. There could be two file-format: one is the contig_name, the other is the chr|pos
+SAMPLE_NAME=$3		##TCGA-09-0365-01A
+CHR=$4	##20
+BIN_DIR=$5  ##/h1/zhangji/SNPdetector/LINUX/src
+CLEAN_ALL_INTERMEDIATE_FILES=$6  ## set to 1 then all intermediate bam files will be replaced
+
+## use the bam file for tumor and normal analysis
+SAMPLE_BAM_FILE=$7  ## e.g. /nfs_exports/genomes/1/PCGP/BucketRaw/SJTALL/SJTALL011_D-TB-09-2789.bam
+MATCHING_SAMPLE_BAM_FILE=$8 ## e.g. /nfs_exports/genomes/1/PCGP/BucketRaw/SJTALL/SJTALL011_G-8783.bam
+
+## this flag gives an option to exclude the indels that only belong to the "clone"s
+SKIP_CLONE_HIT=1
+
+
+
+READ_LENGTH=100
+ERR_FILE=${PROCESS_DIR}/${SAMPLE_NAME}_${CHR}_${CURRENT_FILE_NAME}_err.txt
+REPORT_FILE=${PROCESS_DIR}/${SAMPLE_NAME}_${CHR}_${CURRENT_FILE_NAME}_rpt.txt
+
+## RUN_DIR=${PROCESS_DIR}/run_${SAMPLE_NAME}.${CHR}
+RUN_DIR=${PROCESS_DIR}
+INPUT_CONTIG2MRNA_FILE=${RUN_DIR}/${CURRENT_FILE_NAME}
+
+
+
+GET_FASTA=${BIN_DIR}/FastaGetData1.prl
+
+## SNPDetector_ROOT=/nfs_exports/linux-file1/home/naevegrp/jzhang2/NextGen
+NEXTGEN_BIN_ROOT_DIR=/user/songliu/u2/group/Qiang/Exome/scripts/snp_postprocess/snv_postprocess
+FASTQ_FROM_BAM=${NEXTGEN_BIN_ROOT_DIR}/fasta_from_bamfile
+CHECK_REPEAT_REGION=${NEXTGEN_BIN_ROOT_DIR}/check_replicate_region
+EXTRACT_FASTA_FORMAT=${NEXTGEN_BIN_ROOT_DIR}/perlsrc/extract_fasta_format.pl
+SNPDetectorBIN_DIR=${NEXTGEN_BIN_ROOT_DIR}/SNPdetector/LINUX/src
+STRIP_LINE=${SNPDetectorBIN_DIR}/strip_line
+TSIM=${SNPDetectorBIN_DIR}/tsim
+WRITE_FETCH=${SNPDetectorBIN_DIR}/write_fetch_file
+PRT_CHMAP_ID=${SNPDetectorBIN_DIR}/prt_chmap_id
+REPACK_ALIGN=${SNPDetectorBIN_DIR}/repack_align
+CK_INDEL=${SNPDetectorBIN_DIR}/ck_denovo_indel_in_NextGen
+## CK_INDEL=/nfs_exports/linux-file1/home/naevegrp/jzhang2/NextGen/SNPdetector/LINUX/new_src/ck_denovo_indel_in_NextGen
+MAP_BY_ALIGN=${SNPDetectorBIN_DIR}/map_interval_by_align
+CK_INDEL_SPLICE=${SNPDetectorBIN_DIR}/ck_indel_in_exon
+FILTER_ALIGN=${SNPDetectorBIN_DIR}/filter_align
+FIND_SUB=${SNPDetectorBIN_DIR}/FindSub.pl
+PRT_SEQLOC=${SNPDetectorBIN_DIR}/prt_seqloc
+CK_INDEL_by_REF=${SNPDetectorBIN_DIR}/ck_indel_in_NextGen
+
+HG_FASTA_DIR=/user/songliu/u2/group/Qiang/Exome/reference/fasta
+MAX_READ_COUNT=1000
+
+
+if test ! -d ${RUN_DIR}
+then
+  echo "Fail to find directory ${RUN_DIR}"
+  exit 1
+fi
+
+if test ! -s ${INPUT_CONTIG2MRNA_FILE}
+then
+  echo "Fail to find file ${INPUT_CONTIG2MRNA_FILE} in dir=${RUN_DIR}, file=${CURRENT_FILE_NAME}"
+  exit 1
+fi
+
+cd ${RUN_DIR}
+if test -s ${REPORT_FILE}
+then
+  rm ${REPORT_FILE}
+fi
+
+
+
+
+## clean up any pre-existing direcotry
+for i in `cat ${INPUT_CONTIG2MRNA_FILE}`; do
+  cd ${RUN_DIR}
+  contig_name=`echo "$i" |sed /\|/s//_/`
+  if test -d ${RUN_DIR}/${contig_name}
+  then
+    rm -rf ${RUN_DIR}/${contig_name}
+  fi
+done
+
+CONTIG_LIST_FILE=${INPUT_CONTIG2MRNA_FILE}
+
+for i in `cat ${CONTIG_LIST_FILE}`; do
+  cd ${RUN_DIR}
+  echo $i|sed /\|/s//\\t/g |awk '{printf("%ld", NF)}' >k
+  num_field=`awk '{printf("%s", $1)}' k`
+  if test $num_field -le 1
+  then
+    echo "incorrect line $i for ${CURRENT_FILE_NAME}"
+    exit 1
+  fi
+  chr=`echo $i |cut -f1 -d"|"|sed /chr/s///g`  ## need to get rid of the chr tag
+  pos=`echo $i |cut -f2 -d "|"`
+  indel_size=0
+  if test $num_field = 3
+  then
+    inde_size=`echo $i |cut -f3 -d"|"`
+  fi
+  chr_from=`echo "$pos $indel_size $READ_LENGTH" |awk '{printf("%ld", $1-$2-$3)}'`
+  chr_to=`echo "$pos $indel_size $READ_LENGTH" |awk '{printf("%ld", $1+$2+$3)}'`
+  echo "chr=$chr; chr_from=$chr_from; chr_to=$chr_to"
+
+  contig_name=`echo "$i" |sed /\|/s//_/`
+  contig=contig_name
+  echo "i=$i contig=$contig_name"
+
+  stop_here=0
+
+  if test ! -d ${RUN_DIR}/${contig_name}
+  then
+    mkdir ${RUN_DIR}/${contig_name}
+    echo "dir=${RUN_DIR}/${contig_name}"
+  fi
+  cd ${RUN_DIR}/${contig_name}
+  if test -s old_new_id_map.txt
+  then
+    rm old_new_id_map.txt
+  fi
+## find the genomic location for the contig. use the full contig name
+
+  if test -s report.out
+  then
+    mv report.out report.out.old
+  fi
+
+  if test -s reads_match_wildtype.lst
+  then
+    rm reads_match_wildtype.lst
+  fi
+
+## create a fasta sequence based on the level
+  echo "chr${chr}|$chr_from|$chr_to|+" >seqloc.lst
+  ${WRITE_FETCH} -d ${HG_FASTA_DIR}/.fa
+  echo ">${contig_name} hg19_dna range=chr${chr}:${chr_from}-${chr_to} 5'pad=0 3'pad=0 revComp=FALSE strand=? repeatMasking=none" >test.seq
+  echo "${PRT_SEQLOC} -i seqloc.lst -d ./ -b T"
+  ${PRT_SEQLOC} -i seqloc.lst -d ./ -b T
+  if test ! -s chr${chr}.seq
+  then
+    echo "Fail to generate chr${chr}.seq in ${PRT_SEQLOC} -i seqloc.lst -d ./ -b T for ${contig_name}" >>${ERR_FILE}
+    stop_here=1
+  fi
+
+## collecting all reads in tumor sample
+  if test $stop_here = 0
+  then
+    ${STRIP_LINE} -i chr${chr}.seq -o stdout>>test.seq
+    rm chr${chr}.seq
+    mv test.seq ${contig_name}.seq
+## create a list of the sequences that are in close viciity to the indel site
+    t_chr_from=`echo "$pos $indel_size 20" |awk '{printf("%ld", $1-$2-$3)}'`
+    t_chr_to=`echo "$pos $indel_size 20" |awk '{printf("%ld", $1+$2+$3)}'`
+
+    echo "${FASTQ_FROM_BAM} ${SAMPLE_BAM_FILE} $chr $chr_from $chr_to ${chr}_${chr_from}_${chr_to}_err.log reads_lib"
+    ${FASTQ_FROM_BAM} ${SAMPLE_BAM_FILE} $chr $chr_from $chr_to ${chr}_${chr_from}_${chr_to}_err.log reads_lib
+
+    if test -s ${chr}_${chr_from}_${chr_to}_err.log
+    then
+      stop_here=1
+      rm ${chr}_${chr_from}_${chr_to}_err.log
+    else
+      total_read=`grep ">" reads_lib.fa |cut -f2 -d">" |wc |awk '{printf("%s", $1)}'`
+      if test $total_read -gt ${MAX_READ_COUNT}
+      then
+        rm reads_lib*
+## create a list of the sequences that are in close viciity to the indel site
+        t_chr_from=`echo "$pos $indel_size 20" |awk '{printf("%ld", $1-$2-$3)}'`
+        t_chr_to=`echo "$pos $indel_size 20" |awk '{printf("%ld", $1+$2+$3)}'`
+        ${FASTQ_FROM_BAM} ${SAMPLE_BAM_FILE} $chr $t_chr_from $t_chr_to ${chr}_${t_chr_from}_${t_chr_to}_err.log reads_lib
+      fi
+        
+      mv reads_lib.fa reads_lib.txt
+      mv reads_lib.fa.qual reads_lib.qual
+    fi
+  fi
+
+## perform the first-phase analysis
+  if test $stop_here = 0
+  then
+    echo ">${contig_name}.ent" >job.lst
+## need to add the extension .seq to the job.lst so that it won't be considered as a Genbank ID
+    grep ">" reads_lib.txt |cut -f2 -d">" |head -n ${MAX_READ_COUNT}|sed /\$/s//\.seq/ >>job.lst
+
+    ${WRITE_FETCH} -e ./.ent -l reads_lib.txt
+    ${TSIM} -i job.lst -f4 -P1 -zF -y"reads_align" -x T
+    if test -s err.log
+    then
+      echo "$contig: error in ${TSIM} -i job.lst -f4 -P4 -zF -y reads_align " >>${ERR_FILE}
+      stop_here=1
+    else
+## trim the ends of the alignment
+      ${FILTER_ALIGN} -i ${contig_name}.ent -o ${contig_name}.ent -c 0 -s 1 -u 0 -x 0 -k 0
+      ${PRT_CHMAP_ID} -i ${contig_name}.ent -o out -k T -d "reads_align" -L T -z F
+      if test ! -s out
+      then
+        echo "$contig: no reads aligned to the contig" >>${ERR_FILE}
+        echo "${contig_name}	Bad	Reads_fail_to_align" >>${REPORT_FILE}
+        stop_here=1
+      else
+##      awk '{if($8 <50 || $9 < 95) printf("%s\t%ld\t%ld\t%ld\n", $1, $8*$9/100, $15, $8*$9/$15)}' out |awk '{if($4 <=90) print $0}' |cut -f1 >bad_align.lst
+        awk '{if((($8*100/$15 <75) && $8 <50) || $9 < 95) printf("%s\t%ld\t%ld\t%ld\n", $1, $8*$9/100, $15, $8*$9/$15)}' out |awk '{if($4 <=90) print $0}' |cut -f1 >bad_align.lst
+
+## also collect reads that were mapped with near identity with no gap to the wild-type. These reads will not be used for second map
+        awk '{if($3-$2+1 >=$15-5 && $3-$2 == $7-$6) print $0}' out |cut -f1 >reads_match_wildtype.lst
+
+        if test -s bad_align.lst
+        then
+          echo ">bad_align" >bad_align.lst.mod
+          cat bad_align.lst >>bad_align.lst.mod
+          ${REPACK_ALIGN} -i ${contig_name}.ent -o ${contig_name}.ent  -l bad_align.lst.mod
+          good_read_count=`fgrep -f bad_align.lst -v out |wc |awk '{printf("%s", $1)}'`
+          rm bad_align.lst
+          rm bad_align.lst.mod
+        else
+          good_read_count=`wc out |awk '{printf("%s", $1)}'`
+        fi
+
+        if test ${good_read_count} -le 2
+        then
+          echo "${contig_name}	Bad	Too_few_good_reads" >>${REPORT_FILE}
+          stop_here=1
+        else	## more work is needed
+          echo "${CK_INDEL} -i ${contig_name}.ent -q reads_lib.qual -o report.out -e export.out -c 3 -s reads_align -r reads_align "
+          ${CK_INDEL} -i ${contig_name}.ent -q reads_lib.qual -o report.out -e export.out -c 3 -s "reads_align" -r "reads_align"
+          ## check the clone hit
+          if test ${SKIP_CLONE_HIT} = 1
+          then
+            if test -s export.out
+            then
+              unique_count=`fgrep -f export.out old_new_id_map.txt |cut -f1 -d"|" |sort -u |wc |awk '{printf("%s", $1)}'`
+              echo "unique_count=$unique_count"
+              if test $unique_count -le 1
+              then
+                rm export.out
+                sed /Good/s//BadClone/ report.out >report.out.mod
+                mv report.out.mod report.out
+                echo "${contig_name}	Bad	AllHitClone" >>${REPORT_FILE}
+                stop_here=1
+              fi
+            fi
+          fi
+           
+          if test -s export.out
+          then
+            ${REPACK_ALIGN} -i ${contig_name}.ent -o ${contig_name}_mod.ent  -l export.out
+          fi
+
+## add genomic coordidates to report.out
+##        sed /\^/s//"$chr	$chr_from	"/ report.out |awk '{printf("%s\t%ld\t%ld\t%ld", $1, $2+$6, $2+$7, $2+$8); for(i=3; i<=NF; ++i) printf("\t%s", $i); printf("\n")}' >>${REPORT_FILE}
+        fi  ## end of if (good_read_count -le 2) 
+      fi  ## end of if PRT_CHMAP_ID
+    fi ## end of if TSIM
+  fi ## end of if test stop_here
+
+## create the mutant sequence for second-pass analysis
+  if test $stop_here = 0 ## not accomodated
+  then
+    stop_here=1
+    if test -s report.out ## not accomodated
+    then
+      grep Good report.out >x
+      if test -s x  ## not accomodated
+      then
+        stop_here=0
+## chromosome start and stop position. This will be used for grabbing things from unmapped data
+        indel_chr_from=`sed /\^/s//"$chr	$chr_from	"/ x |awk '{printf("%s\t%ld\t%ld\t%ld", $1, $2+$6, $2+$7, $2+$8)}' |cut -f3`
+        indel_chr_to=`sed /\^/s//"$chr	$chr_from	"/ x |awk '{printf("%s\t%ld\t%ld\t%ld", $1, $2+$6, $2+$7, $2+$8)}' |cut -f4`
+## start to build a modified version of sequence file
+        grep insertion x >x_insert_flag
+##sh-3.00$ more x
+##NODE_76 Good    insertion       170     170     170     60      TAGGCCT TCCAAGGCCT(------->TAGGCCT)CATTCAGCTC   HighQ:51;HQU:27;PassQ:18;LowQ:0;LQU:0
+
+## create the mutant sequence
+        mkdir seq_dir
+        stop_here=0
+        new_contig_name=${contig_name}_2
+        ctg_start=`awk '{printf("%ld", $4-1)}' x`
+        echo "${contig_name}|0|$ctg_start|+">seqloc2.lst
+        ${PRT_SEQLOC} -i seqloc2.lst -d seq_dir/ -b F
+        if test ! -s seq_dir/${contig_name}.seq
+        then
+          echo "Fail to get read for ${contig_name}|0|$ctg_start|+" >>${ERR_FILE}
+          stop_here=1
+        else
+          echo ">${new_contig_name}" >${new_contig_name}.seq
+          ${STRIP_LINE} -i seq_dir/${contig_name}.seq -o stdout >>${new_contig_name}.seq
+        fi
+
+        if test $stop_here = 0
+        then
+           if test -s x_insert_flag
+           then
+             cut -f8 x >>${new_contig_name}.seq
+             ctg_start=`awk '{printf("%ld", $4)}' x`
+           else  ## this is a deletion
+             allelen_len=`cut -f8 x |awk '{printf("%ld", length($1))}'`
+             ctg_start=`awk '{printf("%ld", $4+length($8))}' x`
+           fi
+           echo "${contig_name}|$ctg_start|-1|+">seqloc2.lst
+           rm seq_dir/${contig_name}.seq
+           ${PRT_SEQLOC} -i seqloc2.lst -d seq_dir/ -b F
+           if test ! -s seq_dir/${contig_name}.seq
+           then
+             echo "Fail to get read for ${contig_name}|0|$ctg_start|+" >>${ERR_FILE}
+             stop_here=1
+           else
+             ${STRIP_LINE} -i seq_dir/${contig_name}.seq -o stdout >>${new_contig_name}.seq
+           fi
+        fi ## end of stop_here
+
+## create alignment between wild-type and mutant template sequence
+        if test $stop_here = 0
+        then 
+          echo ">${new_contig_name}.seq" >job2.lst
+          echo "${contig_name}.ent" >>job2.lst
+          ${TSIM} -i job2.lst -f4 -P1 -zF -y"wt_read" -x T
+          grep ">" reads_lib.txt |cut -f2 -d">" |sed /\$/s//\.seq/ |head -n ${MAX_READ_COUNT} >>job2.lst
+
+          echo ">${new_contig_name}.seq" >job2.lst
+          grep ">" reads_lib.txt |cut -f2 -d">" |sed /\$/s//\.seq/ |head -n ${MAX_READ_COUNT} >>job2.lst
+##          if test -s reads_match_wildtype.lst
+##          then
+##             grep ">" reads_lib.txt |cut -f2 -d">" |sed /\$/s//\.seq/ |head -n ${MAX_READ_COUNT} |fgrep -f reads_match_wildtype.lst -v>>job2.lst
+##          else
+##            grep ">" reads_lib.txt |cut -f2 -d">" |sed /\$/s//\.seq/ |head -n ${MAX_READ_COUNT} >>job2.lst
+##          fi
+          ${TSIM} -i job2.lst -f4 -P1 -zF -y"reads_align" -x T
+
+## collecting reads from the matching sample (e.g. the normal sample)
+          echo "${FASTQ_FROM_BAM} ${MATCHING_SAMPLE_BAM_FILE} $chr $chr_from $chr_to ${chr}_${chr_from}_${chr_to}_err.log matching_reads_lib"
+          ${FASTQ_FROM_BAM} ${MATCHING_SAMPLE_BAM_FILE} $chr $chr_from $chr_to ${chr}_${chr_from}_${chr_to}_err.log matching_reads_lib
+          if test -s ${chr}_${chr_from}_${chr_to}_err.log
+          then
+            stop_here=1
+          else
+            mv matching_reads_lib.fa matching_reads_lib.txt
+            mv matching_reads_lib.fa.qual matching_reads_lib.qual
+      
+            echo ">${new_contig_name}.ent" >job2.lst
+## limit the number of bases to 1000
+            grep ">" matching_reads_lib.txt |cut -f2 -d">" |head -n ${MAX_READ_COUNT} |sed /\$/s//\.seq/ >>job2.lst
+            cat matching_reads_lib.qual >>reads_lib.qual
+            cat matching_reads_lib.txt >>reads_lib.txt
+
+            ${TSIM} -i job2.lst -f4 -P1 -zF -y"matching_sample" -xT
+            ${PRT_CHMAP_ID} -i ${new_contig_name}.ent -o out -k T -d "reads_align+matching_sample" -L T
+            awk '{if((($8*100/$15 <75) && $8 <50) || $9 < 95) printf("%s\t%ld\t%ld\t%ld\n", $1, $8*$9/100, $15, $8*$9/$15)}' out |awk '{if($4 <=90) print $0}' |cut -f1 >bad_align.lst
+            if test -s bad_align.lst
+            then
+              echo ">bad_align" >bad_align.lst.mod
+              cat bad_align.lst >>bad_align.lst.mod
+## remove the bad alignment here
+              ${REPACK_ALIGN} -i ${new_contig_name}.ent -o ${new_contig_name}.ent  -l bad_align.lst.mod -d 1
+              rm bad_align.lst
+              rm bad_align.lst.mod
+            fi
+          fi
+        fi ## if test stop_here ==0
+      fi ## end of if test x
+    fi  ## end of if test report.out
+  fi  ## end of if stop_here=0
+
+  if test $stop_here = 0
+  then
+## run the indel analysis usingthe old code
+## run the counts with reads_align alone
+    echo "${CK_INDEL_by_REF} -i ${new_contig_name}.ent -q reads_lib.qual -r wt_read -s reads_align -o report2.out -e export2.out "
+    ${CK_INDEL_by_REF} -i ${new_contig_name}.ent -q reads_lib.qual -r wt_read -s reads_align -o report2.out -e export2.out 
+    grep Good report2.out |sort -u>x
+
+## check clone count. Make sure that it is not a single clone event
+    if test -s x
+    then
+      echo GoodQuality_Pass >good.lst
+      echo GoodQuality >>good.lst
+      ${EXTRACT_FASTA_FORMAT} -i export2.out -l good.lst -t 0 -o good.lst.out
+      if test -s good.lst.out
+      then
+        mutant_count=`cut -f1 -d"#" good.lst.out|sort -u |wc |awk '{printf("%ld", $1)}'`
+        echo "mutant_count=$mutant_count"
+        if test $mutant_count -le 1
+        then
+          rm x
+        else  ## check for non-specific mapping
+          indel_pos=`cut -f4 x |head -n1`
+          echo "chr${chr} $chr_from $inde_pos" |awk '{printf("%s:%s\n", $1, $2+$3)}' >snp_list
+          if test -s non_specific_site.out
+          then
+            rm non_specific_site.out
+          fi
+          ## if test $mutant_count -le 3
+          ## then
+          ##    ${CHECK_REPEAT_REGION} `pwd`/snp_list 75 1 `pwd` `pwd`/non_specific_site.txt
+          ##    awk '{if($2 ==75) print $0}' non_specific_site.txt>non_specific_site.out
+          ## else
+          ##    ${CHECK_REPEAT_REGION} `pwd`/snp_list 100 1 `pwd` `pwd`/non_specific_site.txt
+          ##    awk '{if($2 ==100) print $0}' non_specific_site.txt>non_specific_site.out
+          ## fi
+          if test -s non_specific_site.out
+          then
+            rm x
+          fi
+##finish non-specific check
+        fi
+      else
+        rm x
+      fi
+    fi
+
+    if test -s x
+    then
+## figure out how many matching samples also have reads supporting the indel
+      ${CK_INDEL_by_REF} -i ${new_contig_name}.ent -q reads_lib.qual -r wt_read -s reads_align+matching_sample -o report3.out -e export3.out 
+      ${REPACK_ALIGN} -i ${new_contig_name}.ent -o ${new_contig_name}_mod.ent  -l export2.out
+      grep Good report.out >y
+      match_sample_count=0
+      grep ">" matching_reads_lib.txt |cut -f2 -d">" >matching_reads_lib.lst
+      if test -s matching_reads_lib.lst
+      then
+          match_sample_count=`awk '{if(index($1, ">") ==1) tag=$1; else printf("%s\t%s\n", tag, $1)}' export3.out |grep -v Covered |fgrep -f matching_reads_lib.lst |wc |awk '{printf("%s", $1)}'`
+          ## match_sample_count=`fgrep -f matching_reads_lib.lst export3.out |wc |awk '{printf("%s", $1)}'`
+      fi
+      paste y x |cut -f1-9,17 >new_report.out
+      sed /\^/s//"$chr	$chr_from	"/ new_report.out |awk '{printf("%s\t%ld\t%ld\t%ld", $1, $2+$6, $2+$7, $2+$8); for(i=3; i<=NF; ++i) printf("\t%s", $i); printf("\n")}' |sed /\$/s//"	$match_sample_count"/>>${REPORT_FILE}
+    fi
+  fi
+
+  if test ${CLEAN_ALL_INTERMEDIATE_FILES} = 1
+  then
+    if test -d ${RUN_DIR}/${contig_name}
+    then
+      echo "rm -rf ${RUN_DIR}/${contig_name}"
+      rm -rf ${RUN_DIR}/${contig_name}
+    fi
+  fi
+  cd ${RUN_DIR}
+done

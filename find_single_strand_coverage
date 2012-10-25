@@ -1,0 +1,43 @@
+#!/bin/sh
+INPUT_SNP_FIND_FILE=$1
+OUTPUT_FILE=$2
+
+## this program runs Fisher's Exact test to evaluate whether there are any significant allelic imbalance in forward and reverse read for the presence of mutant allele
+## this was used to generate the single-strand SNV site as it is more accurate than a simple orientation check
+
+##NEXTGEN_BIN_ROOT_DIR=/nfs_exports/apps/gnu-apps/NextGen
+##PERLSRC_DIR=${NEXTGEN_BIN_ROOT_DIR}/perlsrc
+##FisherTest=${PERLSRC_DIR}/fisherexact
+NEXTGEN_BIN_ROOT_DIR=/user/songliu/u2/group/Qiang/Exome/scripts/snp_postprocess/snv_postprocess
+PERLSRC_DIR=${NEXTGEN_BIN_ROOT_DIR}
+FisherTest=${PERLSRC_DIR}/fisherexact
+
+#Do we want this hardcoded?
+PValue_cutoff=0.1
+## PValue_cutoff=0.05
+
+## need to do the export for running FisherTest
+export PERL5LIB=${NEXTGEN_BIN_ROOT_DIR}/MikePerl/FishPerl/Text-NSP-1.11
+
+if test ! -s ${INPUT_SNP_FIND_FILE}
+then
+  echo "Fail to find SNPFind output file ${INPUT_SNP_FIND_FILE}"
+  exit 1
+fi
+
+if test -s ${OUTPUT_FILE}
+then
+  rm ${OUTPUT_FILE}
+fi
+
+## cut -f3,21,22,25,26 generates the following info
+## Name($3)    count_ref_tumor_fwd ($21)  count_ref_tumor_rev ($22)   count_var_tumor_fwd ($25)  count_var_tumor_rev ($26)
+## Fisher's analysis requires the following
+## Name    alternative_tumor_count ($18), reference_tumor_count ($16), alternative_normal_count ($17), and reference_normal_count ($15)
+grep SNP ${INPUT_SNP_FIND_FILE} \ #find every "SNP" in the inputted SNP file
+| awk '$29 == 0 { print }' \ #If there is both an alternative fwd and reverse count, it has alternative bi-directional confirmation. This means that the fisher test can be run 
+| cut -f 3,21,22,25,26 |awk '{if($2+$4 >0 && $3+$5>0) printf("%s\t%s\t%s\t%s\t%s\n", $1, $4, $2, $5, $3)}' \ #if there are no cases in one way or the other, we cannot run the fisher test. 
+| ${FisherTest} \ 
+| awk '$1 < 0.1 { print $2 }' \
+> ${OUTPUT_FILE}
+

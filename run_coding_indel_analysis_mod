@@ -1,0 +1,88 @@
+#!/bin/sh
+
+## this is a quick and dirty approach that identifies the coding indels from the bam file and perferms the autocheck
+
+SAMPLE_NAME=$1  ## e.g. SJRHB001
+DISEASE_CODE=$2  ## SJRHB
+BAM_INFO_FILE=$3   ## set a dummy flag like use_default for automated check
+SNP_FIND_OUTPUT_DIR=$4
+
+## ROOT_DIR=/nfs_exports/genomes/1/PCGP/BucketIntermediate
+ROOT_DIR=/nfs_exports/genomes/1/PCGP/BucketIntermediate
+## SNP_FIND_OUTPUT_DIR=/nfs_exports/genomes/1/projects/EXCAP/SJHYPOALL/BucketIntermediate/SnpDetect/SJHYPOALL
+## INDEL_DIR=/nfs_exports/genomes/1/projects/EXCAP/SJHYPOALL/BucketIntermediate/IndelAnalysis
+INDEL_DIR=${ROOT_DIR}/${DISEASE_CODE}/IndelAnalysis
+
+SCRIPT_DIR=/user/songliu/u2/group/Qiang/Exome/scripts/snp_postprocess/snv_postprocess
+dbSNP_check_PROGRAM=${SCRIPT_DIR}/check_putative_indel_dbSNP_overlap 
+
+if test ! -d ${SNP_FIND_OUTPUT_DIR}
+then
+  SNP_FIND_OUTPUT_DIR=${ROOT_DIR}/${DISEASE_CODE}/SnpDetect
+fi
+
+echo "SNP_detect=$SNP_FIND_OUTPUT_DIR"
+
+if test ! -d ${SNP_FIND_OUTPUT_DIR}
+then
+  echo "Fail to find SnpDetect dir ${SNP_FIND_OUTPUT_DIR}"
+  exit 1
+fi
+
+if test ! -d ${INDEL_DIR}
+then
+  echo "Fail to find Indel dir ${INDEL_DIR}"
+  exit 1
+fi
+BAM_HIGH_FILE=${SNP_FIND_OUTPUT_DIR}/${SAMPLE_NAME}_bam_high_20.out
+BAM_LOW_FILE=${SNP_FIND_OUTPUT_DIR}/${SAMPLE_NAME}_bam_low.out
+
+if test ! -s ${BAM_HIGH_FILE}
+then
+  echo "Fail to find Snp File ${BAM_HIGH_FILE}"
+  exit 1
+fi
+
+if test ! -s ${BAM_LOW_FILE}
+then
+  echo "Fail to fnd Snp File ${BAM_LOW_FILE}"
+  exit 1
+fi
+
+cd ${INDEL_DIR}
+ls ${BAM_HIGH_FILE} >${SAMPLE_NAME}_mike_file.lst
+ls ${BAM_LOW_FILE} >>${SAMPLE_NAME}_mike_file.lst
+
+echo "${SCRIPT_DIR}/run_bam_file_somatic_coding_indel ${SAMPLE_NAME} ${DISEASE_CODE} `pwd`/${SAMPLE_NAME}_mike_file.lst ${BAM_INFO_FILE}"
+${SCRIPT_DIR}/run_bam_file_somatic_coding_indel ${SAMPLE_NAME} ${DISEASE_CODE} `pwd`/${SAMPLE_NAME}_mike_file.lst ${BAM_INFO_FILE}
+
+OUTPUT_DIR=${INDEL_DIR}/tempReview_${SAMPLE_NAME}
+
+if test ! -d ${OUTPUT_DIR}
+then
+  echo "Fail to find output dir ${OUTPUT_DIR}"
+  exit 1
+fi
+
+if test ! -s ${OUTPUT_DIR}/${SAMPLE_NAME}_tumor.txt
+then
+  echo "Fail to find output file ${OUTPUT_DIR}/${SAMPLE_NAME}_tumor.txt"
+  exit 1
+fi
+
+cd ${OUTPUT_DIR}
+
+
+if test ! -s ${BAM_INFO_FILE}
+then
+  echo "${SCRIPT_DIR}/run_bam_indel_review_annotation ${SAMPLE_NAME} ${DISEASE_CODE} use_default use_default"
+  ${SCRIPT_DIR}/run_bam_indel_review_annotation ${SAMPLE_NAME} ${DISEASE_CODE} use_default use_default
+else
+  TUMOR_BAM_FILE=`head -n1 ${BAM_INFO_FILE} |cut -f2 -d"|"`
+  NORMAL_BAM_FILE=`head -n1 ${BAM_INFO_FILE} |cut -f3 -d"|"`
+  echo "${SCRIPT_DIR}/run_bam_indel_review_annotation ${SAMPLE_NAME} ${DISEASE_CODE} ${TUMOR_BAM_FILE} ${NORMAL_BAM_FILE}"
+  ${SCRIPT_DIR}/run_bam_indel_review_annotation ${SAMPLE_NAME} ${DISEASE_CODE} ${TUMOR_BAM_FILE} ${NORMAL_BAM_FILE}
+fi
+
+${dbSNP_check_PROGRAM} ${SAMPLE_NAME} `pwd` ${SAMPLE_NAME}_indel_overlap_dbSNP.txt 1
+

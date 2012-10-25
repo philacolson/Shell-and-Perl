@@ -1,0 +1,134 @@
+#!/bin/sh
+## this program is called to clean up the indel overlaps with the substitution
+## it is a temporary fix
+
+DATE_FLAG=$1	## in the format of 11_22_06
+ROOT_DIR=$2
+ALL_GENE_LIST=$3
+## ALL_GENE_LIST=${ROOT_DIR}/all_gene.lst
+
+UNIQUE_SUM_FILE=${ROOT_DIR}/all_unique_${DATE_FLAG}.txt
+ALL_SUM_FILE=${ROOT_DIR}/all_snp_info_${DATE_FLAG}.txt
+ERR_FILE=${ROOT_DIR}/all_err_${DATE_FLAG}.txt
+GENOTYPE_FILE=${ROOT_DIR}/all_genotype_${DATE_FLAG}.txt
+PROTEIN_FILE=${ROOT_DIR}/all_protein_${DATE_FLAG}.txt
+mRNA_FILE=${ROOT_DIR}/all_mRNA_${DATE_FLAG}.txt
+COSMIC_SUM_FILE=${ROOT_DIR}/all_COSMIC_${DATE_FLAG}.txt
+VALID_SUM_FILE=${ROOT_DIR}/all_Valid_${DATE_FLAG}.txt
+
+
+NEXTGEN_BIN_ROOT_DIR=/user/songliu/u2/group/Qiang/Exome/scripts/snp_postprocess/snv_postprocess
+
+SCRIPT_DIR=${NEXTGEN_BIN_ROOT_DIR}
+BIN_DIR=${NEXTGEN_BIN_ROOT_DIR}/SNPdetector/LINUX/src
+ALIGN_TAG=Lung_cancer
+AB1_EXT=scf
+
+cd ${ROOT_DIR}
+
+if test ! -s ${ALL_GENE_LIST}
+then
+  echo "Fail to find file ${ALL_GENE_LIST}"
+  exit 1
+fi
+
+if test -s ${UNIQUE_SUM_FILE}
+then
+  rm ${UNIQUE_SUM_FILE}
+fi
+touch ${UNIQUE_SUM_FILE}
+
+if test -s ${COSMIC_SUM_FILE}
+then
+  rm ${COSMIC_SUM_FILE}
+fi
+touch ${COSMIC_SUM_FILE}
+
+
+if test -s ${VALID_SUM_FILE}
+then
+  rm ${VALID_SUM_FILE}
+fi
+touch ${VALID_SUM_FILE}
+
+
+if test -s ${ALL_SUM_FILE}
+then
+  rm ${ALL_SUM_FILE}
+fi
+touch ${ALL_SUM_FILE}
+
+if test -s ${GENOTYPE_FILE}
+then
+  rm ${GENOTYPE_FILE}
+fi
+touch ${GENOTYPE_FILE}
+
+if test -s ${PROTEIN_FILE}
+then
+  rm ${PROTEIN_FILE}
+fi
+touch ${PROTEIN_FILE}
+
+if test -s ${mRNA_FILE}
+then
+  rm ${mRNA_FILE}
+fi
+touch ${mRNA_FILE}
+
+if test -s ${ERR_FILE}
+then
+  rm ${ERR_FILE}
+fi
+touch ${ERR_FILE}
+
+
+
+for i in `cat ${ALL_GENE_LIST}`; do
+  echo $i
+  cd ${ROOT_DIR}/$i
+  if test -s ${i}_snp_info.txt
+  then
+    echo ">$i" >>${ALL_SUM_FILE}
+    cat ${i}_snp_info.txt >>${ALL_SUM_FILE}
+    if test ! -s ${i}_genotype2trace.txt
+    then
+      echo "Fail to find ${i}_genotype2trace.txt" >>${ERR_FILE}
+    else
+      echo ">$i" >>${GENOTYPE_FILE}
+      cat ${i}_genotype2trace.txt >>${GENOTYPE_FILE}
+    fi
+
+    if test ! -s ${i}_SNP2Protein_map.txt 
+    then
+       echo "Fail to find ${i}_SNP2Protein_map.txt"  >>${ERR_FILE}
+    else
+      echo ">$i" >>${PROTEIN_FILE}
+      cat ${i}_SNP2Protein_map.txt >>${PROTEIN_FILE}
+    fi
+
+    if test -s ${i}_SNP2mRNA_map.txt
+    then
+      echo ">$i" >>${mRNA_FILE}
+      cat ${i}_SNP2mRNA_map.txt >>${mRNA_FILE}
+    fi
+
+    if test -s unique_snp_info.out
+    then
+      cat unique_snp_info.out >>${UNIQUE_SUM_FILE}
+    fi
+
+    if test -s COSMIC_snp_info.out
+    then
+      cat COSMIC_snp_info.out >>${COSMIC_SUM_FILE}
+    fi
+
+    if test -s Valid_snp_info.out
+    then
+      cat Valid_snp_info.out >>${VALID_SUM_FILE}
+    fi
+
+  else
+    echo ${i} >>${ERR_FILE}
+  fi
+done

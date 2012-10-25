@@ -1,0 +1,104 @@
+#!/bin/sh
+## the script prepares the check_SNV.lst for tiers 2, 3 and 4
+## tier2 includes all data 
+## tier3 includes all HQ
+## tier4 can be optionally including or not including
+## the processes are controled by a file RUN_STEPS
+## create a file that includes all low-tier check list. ${SAMPLE_NAME}_lower_tier_check.lst
+SAMPLE_NAME=$1
+DISEASE_CODE=$2
+ASSEMBLY=$3  ## hg18 or hg19 human genome version, 19 is the latest
+
+##BAM_FILE_DIR=/nfs_exports/genomes/1/PCGP/BucketRaw/${DISEASE_CODE}
+BAM_FILE_DIR=/user/songliu/u2/group/Qiang/Exome/bladder_output/BAM
+
+
+##SCRIPT_DIR=/nfs_exports/apps/gnu-apps/NextGen/scripts4all
+##FIND_SUB=/nfs_exports/apps/gnu-apps/NextGen/perlsrc/FindSub.pl
+##BAM_VIEW_SCRIPT=/nfs_exports/apps/internal/scripts/TabToExcel.sh
+SCRIPT_DIR=/user/songliu/u2/group/Qiang/Exome/scripts/snp_postprocess/snv_postprocess
+FIND_SUB=$SCRIPT_DIR/FindSub.pl
+BAM_VIEW_SCRIPT=$SCRIPT_DIR/TabToExcel.sh
+
+#hg18_dbSNP_file=/nfs_exports/apps/gnu-apps/NextGen/nextgensupport/dbSNP130_chr_pos.lst
+hg19_dbSNP_file=/user/songliu/u2/group/Qiang/Exome/scripts/snp_postprocess/snv_postprocess/dbSNP132_hg19_chr_pos.lst
+
+
+D_BAM=`ls ${BAM_FILE_DIR}/${SAMPLE_NAME}_D*.bam`
+G_BAM=`ls ${BAM_FILE_DIR}/${SAMPLE_NAME}_G*.bam`
+
+if test ! -s ${D_BAM}
+then
+  echo "Fail to find diagnosis sample ${D_BAM}"
+  exit 1
+fi
+
+if test ! -s ${G_BAM}
+then
+  echo "Fail to find germline sample ${G_BAM}"
+  exit 1
+fi
+
+
+if test ${ASSEMBLY} = hg19
+then
+  dbSNP_file=${hg19_dbSNP_file} #only accept the latest genome model
+else
+  if test ${ASSEMBLY} = hg18
+  then
+    dbSNP_file=${hg18_dbSNP_file}
+  else
+    echo "Incorrect assembly ${ASSEMBLY}"
+    exit 1
+  fi
+fi
+
+if test ! -s ${SAMPLE_NAME}_tier1_putative_mutation.txt
+then
+  echo "Fail to find tier 1 file ${SAMPLE_NAME}_tier1_putative_mutation.txt"
+  exit 1
+fi
+
+
+## only look for those that has already been updated
+#This takes any read that is not involved with the St. Jude java code and does not have Bad in the title and puts it in the output
+cat ${SAMPLE_NAME}_tier1_putative_mutation.txt |grep -v SJHQ |grep -v Bad |cut -f4,5 |sort -u >not_high_HQ.lst
+
+#any read from the above output is checked against the dbSNP file.  Matches go to the output.
+cat not_high_HQ.lst ${dbSNP_file} |sort |uniq -d |awk '{printf("%s.%s\n", $1, $2)}' >LQ_match_dbSNP.lst
+
+#a hack to get the correct parameters in the correct place.  Prints columns: 4, 5, 1, 2, 3, 4, 5 #FIXME
+awk '{printf("%s.%s\t", $4, $5); print $0}' ${SAMPLE_NAME}_tier1_putative_mutation.txt >${SAMPLE_NAME}_tier1_putative_mutation.txt.mod
+
+#If the read from the putative mutation DOES get a match from the file that has the low snp dbSNP matches, put them in the BAD file. Otherwise put them in the GOOD file.
+#This can all be done in one FIND_SUB call, not two.  FIXME
+${FIND_SUB} -i ${SAMPLE_NAME}_tier1_putative_mutation.txt.mod -c LQ_match_dbSNP.lst -t 1 -d '\t' -n 0 -o ${SAMPLE_NAME}_tier1_putative_mutation.txt.mod.bad
+${FIND_SUB} -i ${SAMPLE_NAME}_tier1_putative_mutation.txt.mod -c LQ_match_dbSNP.lst -t 0 -d '\t' -n 0 -o ${SAMPLE_NAME}_tier1_putative_mutation.txt.mod.good
+
+mv ${SAMPLE_NAME}_tier1_putative_mutation.txt ${SAMPLE_NAME}_tier1_putative_mutation.txt.original
+
+if test -s ${SAMPLE_NAME}_tier1_putative_mutation.txt.mod.good
+then
+#really?  FIXME
+#Also, it cuts out just the GOOD reads and puts them in the putative mutation file.
+  cut -f2-100 ${SAMPLE_NAME}_tier1_putative_mutation.txt.mod.good >${SAMPLE_NAME}_tier1_putative_mutation.txt
+fi
+rm ${SAMPLE_NAME}_tier1_putative_mutation.txt.mod.good
+
+if test -s  ${SAMPLE_NAME}_tier1_putative_mutation.txt.mod.bad
+then
+
+#it then cuts out all the BAD reads and puts them in the same file?  TODO
+  awk '{for(i=2; i<NF-1; ++i) printf("%s\t", $i); printf("%s\tBadSNP\n", $(NF-1))}' ${SAMPLE_NAME}_tier1_putative_mutation.txt.mod.bad >>${SAMPLE_NAME}_tier1_putative_mutation.txt
+fi
+rm ${SAMPLE_NAME}_tier1_putative_mutation.txt.mod.bad
+## rm ${SAMPLE_NAME}_tier1_putative_mutation.txt.mod
+
+
+#Then it excel-ifies them.
+if test ${ASSEMBLY} = hg19
+then
+  ${BAM_VIEW_SCRIPT} -s ${SAMPLE_NAME}_tier1_putative_mutation.txt -d ${D_BAM} -g ${G_BAM} -hg19
+else
+  ${BAM_VIEW_SCRIPT} -s ${SAMPLE_NAME}_tier1_putative_mutation.txt -d ${D_BAM} -g ${G_BAM}
+fi

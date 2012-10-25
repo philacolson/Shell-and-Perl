@@ -1,0 +1,95 @@
+#!/bin/sh
+INPUT_GENE_LIST=$1
+INPUT_VALIDATE_SNP_FILE=$2   ## validate_somatic_loci.txt
+ERR_FILE=$3
+ROOT_DIR=$4
+
+##GENOME_FASTA_DIR=${NEXTGEN_BIN_ROOT_DIR}/nextgensupport/hg18
+GENOME_FASTA_DIR=/user/songliu/u2/group/Qiang/Exome/scripts/snp_postprocess/snv_postprocess/fasta
+
+NEXTGEN_BIN_ROOT_DIR=/user/songliu/u2/group/Qiang/Exome/scripts/snp_postprocess/snv_postprocess
+PERLSRC=${NEXTGEN_BIN_ROOT_DIR}/perlsrc
+FIND_SUB=${PERLSRC}/FindSub.pl
+
+SNPDetector_DIR=${NEXTGEN_BIN_ROOT_DIR}/SNPdetector
+BIN_DIR=${SNPDetector_DIR}/LINUX/src
+WRITE_FETCH_FILE=${BIN_DIR}/write_fetch_file
+PRT_SEQLOC=${BIN_DIR}/prt_seqloc
+STRIP_LINE=${BIN_DIR}/strip_line
+
+
+
+
+if test ! -s ${INPUT_GENE_LIST}
+then
+  echo "Fail to find the gene list file ${INPUT_GENE_LIST}"
+  exit 1
+fi
+
+if test ! -s ${INPUT_VALIDATE_SNP_FILE}
+then
+  echo "Fail to find the validated SNP file ${INPUT_VALIDATE_SNP_FILE}"
+  exit 1
+fi
+
+if test -s ${ERR_FILE}
+then
+  rm ${ERR_FILE}
+fi
+
+for i in `cat ${INPUT_GENE_LIST}`; do
+  echo $i
+  cd ${ROOT_DIR}/$i
+  if test -s good_SNP.map.tmp
+  then
+    rm good_SNP.map.tmp
+  fi
+  echo $i >cgene.lst
+  ${FIND_SUB} -i ${INPUT_VALIDATE_SNP_FILE} -c cgene.lst -d '\t' -n 0 -t 1 -o cgene.lst.out
+  if test -s cgene.lst.out
+  then
+   ${WRITE_FETCH_FILE} -d ${GENOME_FASTA_DIR}/.fa
+## for an insertion represented as 13-14, take 13-9 as the leftmost and 14+9 as the right most site
+    awk '{if(index($5, "-") == 1) printf("chr%s|%ld|%ld|+\n", $2, $3-9, $4+9); else printf("chr%s|%ld|%ld|+\n", $2, $3-10, $4+10)}' cgene.lst.out |sort -u>cgene_loc.lst
+    for j in `cat cgene_loc.lst`; do
+      echo $j >test.lst
+      chrname=`echo $j |cut -f1 -d"|"`
+      if test -s ${chrname}.seq
+      then
+        rm ${chrname}.seq
+      fi
+##      echo "${PRT_SEQLOC} -i test.lst -d ./ -b T -l 200"
+      ${PRT_SEQLOC} -i test.lst -d ./ -b T -l 200
+      if test -s ${chrname}.seq
+      then
+        ${STRIP_LINE} -i ${chrname}.seq -o temp.out
+        var_value=`awk '{printf("%s\n", substr($i, 11, 1))}' temp.out`
+        pos=`echo $j|cut -f2 -d"|" |awk '{printf("%ld", $1+10)}'`
+        echo "pos=$pos"
+        echo $pos >c_pos.lst
+        ## expected_value=`grep $pos cgene.lst.out |cut -f5 |cut -b1 |sort -u`
+        ${FIND_SUB} -i cgene.lst.out -c c_pos.lst -t 1 -d '\t' -n 2 -o c_pos.lst.out
+        if test ! -s c_pos.lst.out  ## its an insertion. look for the 4th column
+        then
+          ${FIND_SUB} -i cgene.lst.out -c c_pos.lst -t 1 -d '\t' -n 3 -o c_pos.lst.out
+        fi
+        expected_value=`cut -f5 c_pos.lst.out |cut -b1 |sort -u`
+        echo "var=$var_value expected=$expected_value"
+        if test $expected_value = "-"
+        then
+          echo "insertion"
+          sed /\^/s//$j"	"/g temp.out >>good_SNP.map.tmp
+        else
+          if test $var_value != $expected_value
+          then
+            echo "error in $j" >>${ERR_FILE}        
+          else
+            sed /\^/s//$j"	"/g temp.out >>good_SNP.map.tmp
+          fi
+        fi
+        rm ${chrname}.seq
+      fi
+    done
+  fi
+done
+     

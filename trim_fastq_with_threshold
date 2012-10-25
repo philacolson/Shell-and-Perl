@@ -1,0 +1,64 @@
+#!/bin/sh
+## this program trims the fastq file based on the quality value
+## needs to include the perl libraries that Mike used for his code
+INPUT_FASTQ_FILE=$1
+MIN_QUAL_VAL=$2
+#
+FILE_NAME="${INPUT_FASTQ_FILE##*/}"
+INPUT_DIR="${INPUT_FASTQ_FILE:0:${#INPUT_FASTQ_FILE} - ${#FILE_NAME}}"
+OUTPUT_DIR="${INPUT_DIR}"
+ERR_LOG_FILE="${OUTPUT_DIR}/fastq_trim_err_rpt.${FILE_NAME}.logout"
+OUTPUT_TRIM_FILE=${OUTPUT_DIR}/${FILE_NAME}.trim
+#
+NEXTGEN_BIN_ROOT_DIR=/user/songliu/u2/group/Qiang/Exome/scripts/snp_postprocess/snv_postprocess
+PERLSRC_PATH=${NEXTGEN_BIN_ROOT_DIR}/perlsrc
+#
+export PERL5LIB=${NEXTGEN_BIN_ROOT_DIR}/MikePerl/SitePerl:${NEXTGEN_BIN_ROOT_DIR}/MikePerl/MultiThread1:${NEXTGEN_BIN_ROOT_DIR}/MikePerl/MultiThread2
+TRIM_PROGM=${PERLSRC_PATH}/fastq_trim.pl  ## set use lib "/mnt/pi_home/jzhang2/NextGen/Indel/fastq_quality_trim/lib/";
+
+if test ! -s ${INPUT_FASTQ_FILE}
+then
+  echo "Fail to find input file ${INPUT_FASTQ_FILE}"
+  exit 1
+fi
+
+if test ! -x ${TRIM_PROGM}
+then
+  echo "Fail to find program ${TRIM_PROGM}"
+  exit 1
+fi
+
+if test ! -d ${INPUT_DIR}
+then
+  echo "Fail to find input directory ${INPUT_DIR}"
+  exit 1
+fi
+
+if test ! -d ${OUTPUT_DIR}
+then
+  echo "Fail to find output directory ${OUTPUT_DIR}"
+  exit 1
+fi
+
+if test -s ${ERR_LOG_FILE}
+then
+  rm ${ERR_LOG_FILE}
+fi
+
+echo ${INPUT_FASTQ_FILE}
+
+## create the *.trim files for the fastq files
+if test -s ${OUTPUT_TRIM_FILE}
+then
+  rm ${OUTPUT_TRIM_FILE}
+fi
+perl ${TRIM_PROGM} -fastq ${INPUT_FASTQ_FILE} -threshold ${MIN_QUAL_VAL} -out ${OUTPUT_TRIM_FILE} &> ${OUTPUT_TRIM_FILE}.log
+if test ! -s ${OUTPUT_TRIM_FILE}
+then
+  echo "Fail in execute ${TRIM_PROGM} -fastq ${INPUT_FASTQ_FILE} -threshold ${MIN_QUAL_VAL} -out ${OUTPUT_TRIM_FILE}"
+  echo "Fail in execute ${TRIM_PROGM} -fastq ${INPUT_FASTQ_FILE} -threshold ${MIN_QUAL_VAL} -out ${OUTPUT_TRIM_FILE}" >>${ERR_LOG_FILE}
+else  ## running the convert-fastq-to-fasta module
+  echo "Converting fastq-to-fasta..."
+perl  ${TRIM_PROGM} -convert-fastq-to-fasta ${OUTPUT_TRIM_FILE}
+  echo "Done onverting fastq-to-fasta"
+fi

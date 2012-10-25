@@ -1,0 +1,66 @@
+#!/bin/sh
+
+INPUT_VAR_FILE=$1  ## input variation files from Mike's java code
+CHR_LIST=$2  ## e.g /tcga_next_gen/TCGA_WholeGenome/IndelAnalysis/all_chr.lst
+REGION_OF_INTEREST_DIR=$3
+OUTPUT_FILE4SNP=$4
+OUTPUT_FILE4Indel=$5
+## REGION_OF_INTEREST_DIR=/tcga_next_gen/TCGA_WholeGenome/IndelAnalysis/CHR_REGION
+
+NEXTGEN_BIN_ROOT_DIR=/user/songliu/u2/group/Qiang/Exome/scripts/snp_postprocess/snv_postprocess
+PERLSRC_DIR=${NEXTGEN_BIN_ROOT_DIR}/perlsrc
+
+FIND_OVERLAP=${PERLSRC_DIR}/find_overlap_interval.pl
+FIND_SUB=${PERLSRC_DIR}/FindSub.pl
+
+if test ! -d ${REGION_OF_INTEREST_DIR}
+then
+  echo "Fail to find directory for region of interest ${REGION_OF_INTEREST_DIR}"
+  exit 1
+fi
+
+if test ! -s ${CHR_LIST}
+then
+  echo "Fail to find chr list file ${CHR_LIST}"
+  exit 1
+fi
+
+if test ! -s ${INPUT_VAR_FILE}
+then
+  echo "Fail to find subdirectory list file ${SUB_DIR_LIST}"
+  exit 1
+fi
+
+if test -s ${OUTPUT_FILE4SNP}
+then
+  rm ${OUTPUT_FILE4SNP}
+fi
+head -n1 ${INPUT_VAR_FILE} >${OUTPUT_FILE4SNP}
+head -n1 ${INPUT_VAR_FILE} >${OUTPUT_FILE4Indel}
+
+
+for i in `cat ${CHR_LIST}`; do
+  echo chr${i} >t_chr.lst
+  ${FIND_SUB} -i ${INPUT_VAR_FILE} -c t_chr.lst -t 1 -d '\t' -n 1 -o t_chr.lst.out
+  if test -s t_chr.lst.out
+  then
+##     awk '{printf("%s\t%s\n", $3, $3)}' t_chr.lst.out >t_chr_interval.out
+    awk '{printf("%s\t%ld\t%ld\n", $3, $3-($5-1), $3+($5-1))}' t_chr.lst.out >t_chr_interval.out
+    ${FIND_OVERLAP} -i t_chr_interval.out -d ${REGION_OF_INTEREST_DIR}/chr${i}_region.txt -o t_chr_output.txt -e err.out -q 1 -n 4 -m 1
+    if test -s t_chr_output.txt
+    then
+      cut -f1 t_chr_output.txt |sort -u >x
+      ${FIND_SUB} -i t_chr.lst.out -c x -t 1 -d '\t' -n 2 -o t_chr.lst.out2
+      if test -s t_chr.lst.out2
+      then
+        grep SNP t_chr.lst.out2 >>${OUTPUT_FILE4SNP}
+        grep -v SNP t_chr.lst.out2 >>${OUTPUT_FILE4Indel}
+      fi
+      rm t_chr.lst.out2
+    fi
+    rm t_chr_output.txt
+  fi
+  rm t_chr.lst
+  rm t_chr_interval.out
+  rm err.out
+done

@@ -1,0 +1,47 @@
+#!/bin/sh
+
+## this program is meant to incorporate the normal coverage and normal mutant allele calls
+## using a lower threshold from the Normal sample is expected to give more interesting results
+## normal samples 
+lowBAMSnpFile=$1  ## this is for use of low-quality qual=10 analysis
+HighBAMFile=$2
+OUTPUT_FILE=$3  ## the output file will retain only the markers found in both INPUT_FILE_from_HighThreshold and lowBAMSnpFile
+# FIXME I see no file called INPUT_FILE_from_HighThreshold
+
+
+
+
+FIND_SUB=/user/songliu/u2/group/Qiang/Exome/scripts/snp_postprocess/snv_postprocess/FindSub.pl
+#FIXME HARDCODE
+
+if test ! -s ${lowBAMSnpFile}
+then
+  echo "Fail to find find from the low threshold ${lowBAMSnpFile}"
+  exit 1
+fi
+
+if test ! -s ${HighBAMFile}
+then
+  echo "Fail to find find input file for analysis ${HighBAMFile}"
+  exit 1
+fi
+
+
+## all the files are used for downstream analysis
+#Puts all the low threshold snps into low_snp.lst
+grep SNP ${lowBAMSnpFile} |cut -f1 |sort -u >low_snp.lst
+
+#puts all the snps in the analysis file into a .snp file
+grep SNP ${HighBAMFile} >${HighBAMFile}.snp
+
+#puts the snp ID? FIXME from the analysis file into the high_snp.lst
+cut -f1 ${HighBAMFile}.snp |sort -u >high_snp.lst
+
+#puts the union of the low and high snps into high_N_low_snp.lst
+cat high_snp.lst low_snp.lst |sort |uniq -d >high_N_low_snp.lst #used later
+
+#reads the analysis SNP input file entries to see if a match exists in the low_snp.lst master list.  If one matches, it stays.  No match, it is not in the output.  So this output file has all the SNPs from the HIGH_BAM_FILE that ARE in the low SNP file.  The output turns into *_bam_input.txt THIS SHOULD BE UNNECESSARY.  EVERY HIGH ALREADY IS IN LOW
+${FIND_SUB} -i ${HighBAMFile}.snp -c low_snp.lst -t 1 -d '\t' -n 0 -o ${OUTPUT_FILE}
+##double checker
+
+rm ${HighBAMFile}.snp

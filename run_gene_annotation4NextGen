@@ -1,0 +1,140 @@
+#!/bin/sh
+INPUT_FILE=$1  ## SJMB004_validate_somatic_loci.txt
+SUB_SUM_FILE=$2
+PROCESS_DIR=$3
+RUN_STEPS=$4
+OUTPUT_FILE_NAME=$5   ##e.g. SJMB004_putative_somatic_mutation.txt
+
+SCRIPT_DIR=/user/songliu/u2/group/Qiang/Exome/scripts/snp_postprocess/snv_postprocess
+PREP_GeneName2GeneID=${SCRIPT_DIR}/prepare_geneName2geneID
+MAKE_GENE_FASTA=${SCRIPT_DIR}/make_gene_fasta_2
+GENERATE_TCGA_SEQ=${SCRIPT_DIR}/generate_TCGA_sequence
+MAP_SOMATIC_MUTATION=${SCRIPT_DIR}/map_all_somatic_mutation
+SUM_RESULTS=${SCRIPT_DIR}/summarize_results
+
+if test ! -s ${RUN_STEPS}
+then
+  echo "Fail to find file ${RUN_STEPS}"
+  exit 1
+fi
+
+cd ${PROCESS_DIR}
+if test ! -s ${INPUT_FILE}
+then
+  echo "Fail to find input file validate_somatic_loci.txt"
+  exit 1
+fi
+
+INPUT_FILE_MOD=${INPUT_FILE}.mod
+
+grep -v no  ${RUN_STEPS} > ${RUN_STEPS}.current
+for i in `cat ${RUN_STEPS}.current`; do
+  if test $i = prepare_geneName2geneID
+  then
+    if test ! -x ${PREP_GeneName2GeneID}
+    then
+      echo "Fail to find the executable ${PREP_GeneName2GeneID}"
+      exit 1
+    fi
+
+## get rid of the first column, which indicate the quality of the analysis
+    cut -f2-100 ${INPUT_FILE} |sort -u >${INPUT_FILE_MOD}
+    ${PREP_GeneName2GeneID} ${INPUT_FILE_MOD} `pwd`
+    OUTPUT_FILE=geneName2geneID.map
+    if test ! -s ${OUTPUT_FILE}
+    then
+      echo "Fail to execute ${PREP_GeneName2GeneID} ${INPUT_FILE}.mod `pwd`"
+      exit 1
+    fi
+
+    cut -f1 ${OUTPUT_FILE} |sort -u >x
+    cut -f1 ${INPUT_FILE_MOD}|sort -u >y
+    cat x y |sort |uniq -u >u    
+    if test -s u
+    then
+      echo "Fail to geneID for the following genes. Check failed_gene.lst"
+      cat u
+      mv u failed_gene.lst
+      exit 1
+    fi
+  fi
+  
+  if test $i = make_gene_fasta
+  then
+
+## the two scripts can not be combined since the first one may have an error message. Need to manually edit the files to make correction
+## examples
+## Gene    Sample  Repeat  Chr     Pos     #Unique #Indel  #Total  #IndelN #TotalN RefAllele       MutantAllele    Flanking
+## SJHQ    ACSBG2  SJTALL001       0       chr19   6141632 29      29      58      0       31      G       A       AAGAGACATTTTGTAGCCCA[G/A]AAATACAAAAAACAAATTGA
+## SJHQ    C7orf13 SJTALL001       0       chr7    156125449       21      21      34      0       20      C       T       TCACTCCGATGTGTCACACA[C/T]GCGGCTCAGTCACCTAGGGA
+
+    awk '{printf("%s|%s\n", $2, $5)}' ${SUB_SUM_FILE} |grep -v Sample |fgrep -f all_gene.lst>gene2chr.lst 
+    ${MAKE_GENE_FASTA} `pwd` `pwd`/gene2chr.lst `pwd`/all_gene.err
+    if test -s all_gene.err
+    then
+      echo "error in ${MAKE_GENE_FASTA} `pwd` `pwd`/all_gene.lst `pwd`/all_gene.err"
+      exit 1
+    fi
+
+    for i in `cat all_gene.lst`; do
+	if test ! -s ${i}/${i}.seq
+      then
+         echo "Fail in gene ${i} for ${MAKE_GENE_FASTA}"
+      fi
+    done
+  fi
+ 
+## create temporary files for preparing annotation
+  if test $i = generate_TCGA_sequence
+  then
+    echo "${GENERATE_TCGA_SEQ} `pwd`/all_gene.lst ${INPUT_FILE_MOD} `pwd`/err.out `pwd`"
+    ${GENERATE_TCGA_SEQ} `pwd`/all_gene.lst ${INPUT_FILE_MOD} `pwd`/err.out `pwd`
+    if test -s err.out
+    then
+      echo "error: {GENERATE_TCGA_SEQ} `pwd`/all_gene.lst ${INPUT_FILE_MOD} `pwd`/err.out `pwd`"
+    fi
+  fi
+
+
+SUM_RESULTS=${SCRIPT_DIR}/summarize_results
+## running the annotation pipeline
+ if test $i = map_all_somatic_mutation
+ then
+   PROJECT_NAME=`head -n1 sample.lst |awk '{printf("%s", substr($1, 1, length($1)-3))}'`
+   echo "${MAP_SOMATIC_MUTATION} `pwd`/all_gene.lst `pwd` ${INPUT_FILE_MOD} `pwd`/sample.lst ${PROJECT_NAME}"
+   ${MAP_SOMATIC_MUTATION} `pwd`/all_gene.lst `pwd` ${INPUT_FILE_MOD} `pwd`/sample.lst ${PROJECT_NAME}
+ fi
+
+
+## summerizes the results
+ if test $i = summarize_results
+ then
+   DATE_STAMP=`date |awk '{printf("%s%s_%s", $2, $3, $6)}'`
+   if test ! -s ${SUB_SUM_FILE}
+   then
+     echo "Fail to find sub_sum.txt file ${SUB_SUM_FILE}"
+     exit 1
+   fi
+   cut -f2-100 ${SUB_SUM_FILE} >${SUB_SUM_FILE}.mod
+   ${SUM_RESULTS} ${SUB_SUM_FILE}.mod `pwd`/all_gene.lst ${DATE_STAMP} ${SUB_SUM_FILE}.annotated
+   
+   if test -s ${SUB_SUM_FILE}.annotated
+   then
+     cut -f1,2 ${SUB_SUM_FILE} |sort +1 -2 >x
+     sort +0 -1 ${SUB_SUM_FILE}.annotated >y
+     join -1 2 -2 1 x y |sort -u |awk '{for(i=1; i<NF; ++i) printf("%s\t", $i); printf("%s\n", $NF)}' |sort +1 -2 |cut -f1,2,3,5,6,7,8,9,10,12-18 >z
+     if test -s z
+     then
+       if test -s ${OUTPUT_FILE_NAME}
+       then
+         rm ${OUTPUT_FILE_NAME}
+       fi
+       echo "GeneName	SJQuality	Sample	Chr	WU_HG18_Pos	Class	AAChange	ProteinGI	mRNA_acc	#Mutant_In_Tumor	#Total_In_Tumor	#Mutant_In_Normal	#Total_In_Normal	ReferenceAllele	MutantAllele	Flanking" >${OUTPUT_FILE_NAME}
+       cat z >>${OUTPUT_FILE_NAME}
+     fi
+   fi
+
+   rm ${SUB_SUM_FILE}.annotated
+   rm ${SUB_SUM_FILE}.mod
+ fi
+done

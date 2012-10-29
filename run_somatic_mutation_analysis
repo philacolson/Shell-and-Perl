@@ -6,6 +6,7 @@ FALSE_SNP_FILE=$2 #or value will be 'no_false_snp'
 #hq
 D_BAM=$3 #cancer genome
 G_BAM=$4 #noncancer genome
+LOG_PATH = $5
 
 RUN_STEPS=run_all_somatic_SNV_steps
 
@@ -23,6 +24,7 @@ then
   echo "annotate_low_tier_mutation" >>${RUN_STEPS}
   echo "modify_SJLLQ" >>${RUN_STEPS}
 fi
+echo "DEBUG: created run_all_somatic_SNV_steps">> $LOG_PATH/log.txt
 
 ##SCRIPT_DIR=/nfs_exports/apps/internal/scripts
 ##FIND_SUB=/nfs_exports/apps/gnu-apps/NextGen/perlsrc/FindSub.pl
@@ -45,7 +47,7 @@ LOW_BAM_SNP_FILE=${SAMPLE_NAME}_bam_low.out
 ## LOW_BAM_SNP_FILE=SJMB004_bam_new_low.out
 if test ! -s ${LOW_BAM_SNP_FILE}
 then
-  echo "Fail to find low-quality compute data ${LOW_BAM_SNP_FILE}"
+  echo "WARNING: Fail to find low-quality compute data ${LOW_BAM_SNP_FILE}" >> $LOG_PATH/log.txt
   exit 1
 fi
 
@@ -55,21 +57,21 @@ BAM_GERMLINE_SNP_FILE=${SAMPLE_NAME}_G_bam.out
 ## BAM_GERMLINE_SNP_FILE=SJMB004_G_bam.out
 if test ! -s ${BAM_GERMLINE_SNP_FILE}
 then
-  echo "Fail to find germline SNP file ${SAMPLE_NAME}_G_bam"
+  echo "WARNING: Fail to find germline SNP file ${SAMPLE_NAME}_G_bam" >> $LOG_PATH/log.txt
   exit 1
 fi
 
 HIGH_BAM_OLD_FILE=${SAMPLE_NAME}_bam_high_20_old.out
 if test ! -s ${HIGH_BAM_OLD_FILE}
 then
-  echo "Fail to find the bam file with high quality old results: ${HIGH_BAM_OLD_FILE}"
+  echo "WARNING: Fail to find the bam file with high quality old results: ${HIGH_BAM_OLD_FILE}" >> $LOG_PATH/log.txt
 ##  exit 1
 fi
 
 HIGH_BAM_FILE=${SAMPLE_NAME}_bam_high_20.out
 if test ! -s ${HIGH_BAM_FILE}
 then
-  echo "Fail to find the bam file with high quality new results: ${HIGH_BAM_FILE}"
+  echo "WARNING:  Fail to find the bam file with high quality new results: ${HIGH_BAM_FILE}">>$LOG_PATH/log.txt
   exit 1
 fi
 
@@ -81,7 +83,7 @@ then
 fi
 if test ! -s ${HIGH_BAM_FILE}.original
 then
-  echo "Fail to copy the original bam file ${HIGH_BAM_FILE}.original"
+  echo "WARNING: Fail to copy the original bam file ${HIGH_BAM_FILE}.original" >> $LOG_PATH/log.txt
   exit 1
 fi
 
@@ -92,7 +94,7 @@ fi
 
 if test ! -s ${LOW_BAM_SNP_FILE}.original
 then
-  echo "Fail to copy the original bam file ${LOW_BAM_SNP_FILE}.original"
+  echo "WARNING:  Fail to copy the original bam file ${LOW_BAM_SNP_FILE}.original" >> $LOG_PATH/log.txt
   exit 1
 fi
 
@@ -102,8 +104,10 @@ then
 fi
 
 #params are the input and the output file.
-${SCRIPT_DIR}/find_single_strand_coverage ${HIGH_BAM_FILE}.original ${SAMPLE_NAME}_high_single_strand_SNV.lst
-${SCRIPT_DIR}/find_single_strand_coverage ${LOW_BAM_SNP_FILE}.original ${SAMPLE_NAME}_low_single_strand_SNV.lst
+echo "DEBUG: Beginning find_single_strand_coverage with ${HIGH_BAM_FILE}.original, ${SAMPLE_NAME_high_single_strand_SNV.lst"
+${SCRIPT_DIR}/find_single_strand_coverage ${HIGH_BAM_FILE}.original ${SAMPLE_NAME}_high_single_strand_SNV.lst $LOG_PATH
+echo "DEBUG: Beginning find_single_strand_coverage with ${LOW_BAM_SNP_FILE}.original, ${SAMPLE_NAME_low_single_strand_SNV.lst"
+${SCRIPT_DIR}/find_single_strand_coverage ${LOW_BAM_SNP_FILE}.original ${SAMPLE_NAME}_low_single_strand_SNV.lst $LOG_PATH
 
 
 

@@ -9,31 +9,32 @@ SCRIPT_DIR=/user/songliu/u2/group/Qiang/Exome/scripts/snp_postprocess/snv_postpr
 
 
 FILTER_DBSNP=$SCRIPT_DIR/filter_low_quality_dbSNP_4_tier1 
-#this guy is a program FIXME and is not passed any parameters which seems odd
 
 
 ##EXCEL_ROOT_DIR=/nfs_exports/linux-file1/home/naevegrp/jzhang2/NextGen/PCGP
 EXCEL_ROOT_DIR=/user/songliu/u2/group/Qiang/Exome/bladder_output/EXCEL
+LOG_DIR = EXCEL_ROOT_DIR
 
 for i in `cat ${INPUT_SAMPLE_LIST}`; do
   if test ! -d ${EXCEL_ROOT_DIR}/${i} #if there is no directory for the SNP
   then
-    echo "no dir for ${EXCEL_ROOT_DIR}/${i}"
+    echo "INFO: no dir for ${EXCEL_ROOT_DIR}/${i}, making directory." >> LOG_DIR/log.txt
     mkdir -p ${EXCEL_ROOT_DIR}/${i}
     #exit 1
   fi
 done
+echo "DEBUG: created EXCEL directories." >>LOG_DIR/log.txt
 
 for i in `cat ${INPUT_SAMPLE_LIST}`; do
-  echo $i
+  ##echo $i
   cp ../${i}_G_bam.out .
   cp ../${i}_bam_low.out ${i}_bam_low.out
   cp ../${i}_bam_high_20.out ${i}_bam_high_20.out
-  echo "${SCRIPT_DIR}/run_somatic_mutation_analysis ${i} no_false_snp"
+  echo "DEBUG:  ${SCRIPT_DIR}/run_somatic_mutation_analysis ${i} no_false_snp" >> LOG_DIR/log.txt
   #hq
   D_BAM=`ls ${BAM_DIR}/${i}_D*.bam`
   G_BAM=`ls ${BAM_DIR}/${i}_G*.bam`
-  ${SCRIPT_DIR}/run_somatic_mutation_analysis ${i} no_false_snp ${D_BAM} ${G_BAM}
+  ${SCRIPT_DIR}/run_somatic_mutation_analysis ${i} no_false_snp ${D_BAM} ${G_BAM} ${LOG_DIR}
 done
 
 echo "${SCRIPT_DIR}/run_check_snv_script ${INPUT_SAMPLE_LIST} ${DISEASE_CODE}"

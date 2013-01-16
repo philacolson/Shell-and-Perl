@@ -27,14 +27,20 @@ STRIP_LINE=${BIN_DIR}/strip_line
 
 if test ! -s ${INPUT_GENE2CHR_LIST}
 then
+if [ $DEBUG_LEVEL -gt 0 ]
+then
   echo "Fail to find the gene2chr file ${INPUT_GENE2CHR_LIST}"
-  exit 1
+  fi
+exit 1
 fi
 
 if test ! -d ${GENE_EXON_DIR}
 then
+if [ $DEBUG_LEVEL -gt 0 ]
+then
   echo "Fail to find the gene2exon dir ${GENE_EXON_DIR}"
-  exit 1
+  fi
+exit 1
 fi
 
 
@@ -43,8 +49,11 @@ cut -f2 -d"|" ${INPUT_GENE2CHR_LIST} |sort -u >${INPUT_GENE2CHR_LIST}_chr.lst
 for i in `cat ${INPUT_GENE2CHR_LIST}_chr.lst`; do
   if test ! -s ${GENE_EXON_DIR}/${i}_region.txt
   then
+if [ $DEBUG_LEVEL -gt 0 ]
+then
     echo "Fail to find region ${GENE_EXON_DIR}/${i}_region.txt"
-  else
+  fi
+else
     grep $i$ ${INPUT_GENE2CHR_LIST} |cut -f1 -d"|" |sort -u >current_gene.lst
     ${FIND_SUB} -i ${GENE_EXON_DIR}/${i}_region.txt -c current_gene.lst -t 1 -d '\t' -n 0 -o current_gene.lst.out
     if test -s current_gene.lst.out
@@ -76,8 +85,11 @@ for i in `cat ${INPUT_GENE2CHR_LIST}_chr.lst`; do
         ${PRT_SEQLOC} -i seqloc.lst -d ./ -b T
         if test ! -s ${i}.seq
         then
+          if [ $DEBUG_LEVEL -gt 0 ]
+          then
           echo "Fail in ${PRT_SEQLOC} -i seqloc.lst -d ./ -b T for ${GeneName}"
-          exit 1
+          fi
+        exit 1
         fi
         ${STRIP_LINE} -i ${i}.seq -o stdout>>test.seq
         rm ${i}.seq
@@ -85,8 +97,10 @@ for i in `cat ${INPUT_GENE2CHR_LIST}_chr.lst`; do
 
         if test ! -s ${GENE_NAME}.seq
         then
-          echo "Fail to get sequence for prt_seqloc -i seqloc.lst -d ./ -b T for ${GeneName}"
-          echo "Fail to get sequence for prt_seqloc -i seqloc.lst -d ./ -b T for ${GeneName}" >>${ERR_REPORT_FILE}
+         if [ $DEBUG_LEVEL -gt 0 ]
+then echo "Fail to get sequence for prt_seqloc -i seqloc.lst -d ./ -b T for ${GeneName}"
+      fi
+echo "Fail to get sequence for prt_seqloc -i seqloc.lst -d ./ -b T for ${GeneName}" >>${ERR_REPORT_FILE}
 
         else
 ## new code. check to make sure that there is no garbage title line from UCSC

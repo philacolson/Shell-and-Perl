@@ -29,34 +29,49 @@ G_BAM=`ls ${BAM_FILE_DIR}/${SAMPLE_NAME}_G*.bam`
 
 if test ! -s ${D_BAM}
 then
+if [ $DEBUG_LEVEL -gt 0 ]
+then
   echo "Fail to find diagnosis sample ${D_BAM}"
-  exit 1
+ fi
+exit 1
 fi
 
 if test ! -s ${G_BAM}
 then
-  echo "Fail to find germline sample ${G_BAM}"
-  exit 1
+  if [ $DEBUG_LEVEL -gt 0 ]
+then
+echo "Fail to find germline sample ${G_BAM}"
+  fi
+exit 1
 fi
 
 
 if test ${ASSEMBLY} = hg19
 then
-  dbSNP_file=${hg19_dbSNP_file} #only accept the latest genome model
+  if [ $DEBUG_LEVEL -gt 0 ]
+then
+dbSNP_file=${hg19_dbSNP_file} #only accept the latest genome model
+fi
 else
   if test ${ASSEMBLY} = hg18
   then
     dbSNP_file=${hg18_dbSNP_file}
   else
-    echo "Incorrect assembly ${ASSEMBLY}"
-    exit 1
+    if [ $DEBUG_LEVEL -gt 0 ]
+then
+echo "Incorrect assembly ${ASSEMBLY}"
+    fi
+exit 1
   fi
 fi
 
 if test ! -s ${SAMPLE_NAME}_tier1_putative_mutation.txt
 then
-  echo "Fail to find tier 1 file ${SAMPLE_NAME}_tier1_putative_mutation.txt"
-  exit 1
+  if [ $DEBUG_LEVEL -gt 0 ]
+then
+echo "Fail to find tier 1 file ${SAMPLE_NAME}_tier1_putative_mutation.txt"
+  fi
+exit 1
 fi
 
 

@@ -27,20 +27,29 @@ LOW_CONFIDENCE_SOMATIC_SNP_FILE_REPEAT=${LOW_CONFIDENCE_SOMATIC_SNP_FILE}.repeat
 
 if test ! -x ${FIND_GENE_PROGRAM}
 then
-  echo "Fail to find program ${FIND_GENE_PROGRAM}"
-  exit 1
+ if [ $DEBUG_LEVEL -gt 0 ]
+then
+echo "Fail to find program ${FIND_GENE_PROGRAM}"
+fi
+exit 1
 fi
 
 if test ! -d ${GENE_EXON_REGION_DIR}
 then
-  echo "Fail to find gene-exon direcotry ${GENE_EXON_REGION_DIR}"
-  exit 1
+if [ $DEBUG_LEVEL -gt 0 ]
+then
+echo "Fail to find gene-exon direcotry ${GENE_EXON_REGION_DIR}"
+fi
+exit 1
 fi
 
 if test ! -d ${PROCESS_DIR}
 then
-  echo "Fail to find diretory ${PROCESS_DIR}"
-  exit 1
+if [ $DEBUG_LEVEL -gt 0 ]
+then
+echo "Fail to find diretory ${PROCESS_DIR}"
+fi
+exit 1
 fi
 
 cd ${PROCESS_DIR}
@@ -63,9 +72,11 @@ then
 fi
 if test ! -s ${SAMPLE_NAME}_somatic_snp.txt
 then
-  echo "Fail to create ${SAMPLE_NAME}_somatic_snp.txt"
+ if [ $DEBUG_LEVEL -gt 0 ]
+then echo "Fail to create ${SAMPLE_NAME}_somatic_snp.txt"
   echo "cat ${HIGH_CONFIDENCE_SOMATIC_SNP_FILE} ${HIGH_CONFIDENCE_SOMATIC_SNP_FILE_REPEAT} ${LOW_CONFIDENCE_SOMATIC_SNP_FILE} ${LOW_CONFIDENCE_SOMATIC_SNP_FILE_REPEAT}"
-  exit 1
+ fi
+exit 1
 fi
 
 mv ${SAMPLE_NAME}_somatic_snp.txt temp/.
@@ -76,8 +87,11 @@ ${FIND_GENE_PROGRAM} `pwd` ${BAD_SNP_FILE} `pwd`/SOMATIC_RESULTS/sub_sum.txt `pw
 
 if test ! -s SOMATIC_RESULTS/sub_sum.txt
 then
-  echo "Fail to build sub_sum.txt after running ${FIND_GENE_PROGRAM} `pwd` ${BAD_SNP_FILE} `pwd`/SOMATIC_RESULTS/sub_sum.txt `pwd`/SOMATIC_RESULTS/validate_somatic_loci.txt ${GENE_EXON_REGION_DIR} somatic_snp.txt"
-  exit 1
+  if [ $DEBUG_LEVEL -gt 0 ]
+then
+echo "Fail to build sub_sum.txt after running ${FIND_GENE_PROGRAM} `pwd` ${BAD_SNP_FILE} `pwd`/SOMATIC_RESULTS/sub_sum.txt `pwd`/SOMATIC_RESULTS/validate_somatic_loci.txt ${GENE_EXON_REGION_DIR} somatic_snp.txt"
+fi
+exit 1
 fi
 
 OUTPUT_SUMMARY_FILE=${PROCESS_DIR}/${SAMPLE_NAME}_sub_sum.txt

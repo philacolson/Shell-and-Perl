@@ -22,14 +22,20 @@ STRIP_LINE=${BIN_DIR}/strip_line
 
 if test ! -s ${INPUT_GENE_LIST}
 then
+if [ $DEBUG_LEVEL -gt 0 ]
+then
   echo "Fail to find the gene list file ${INPUT_GENE_LIST}"
-  exit 1
+  fi
+exit 1
 fi
 
 if test ! -s ${INPUT_VALIDATE_SNP_FILE}
 then
-  echo "Fail to find the validated SNP file ${INPUT_VALIDATE_SNP_FILE}"
-  exit 1
+  if [ $DEBUG_LEVEL -gt 0 ]
+then
+echo "Fail to find the validated SNP file ${INPUT_VALIDATE_SNP_FILE}"
+  fi
+exit 1
 fi
 
 if test -s ${ERR_FILE}
@@ -38,8 +44,11 @@ then
 fi
 
 for i in `cat ${INPUT_GENE_LIST}`; do
-  echo $i
-  cd ${ROOT_DIR}/$i
+  if [ $DEBUG_LEVEL -gt 0 ]
+then
+echo $i
+fi
+cd ${ROOT_DIR}/$i
   if test -s good_SNP.map.tmp
   then
     rm good_SNP.map.tmp
@@ -65,8 +74,11 @@ for i in `cat ${INPUT_GENE_LIST}`; do
         ${STRIP_LINE} -i ${chrname}.seq -o temp.out
         var_value=`awk '{printf("%s\n", substr($i, 11, 1))}' temp.out`
         pos=`echo $j|cut -f2 -d"|" |awk '{printf("%ld", $1+10)}'`
-        echo "pos=$pos"
-        echo $pos >c_pos.lst
+        if [ $DEBUG_LEVEL -gt 0 ]
+then
+echo "pos=$pos"
+fi
+echo $pos >c_pos.lst
         ## expected_value=`grep $pos cgene.lst.out |cut -f5 |cut -b1 |sort -u`
         ${FIND_SUB} -i cgene.lst.out -c c_pos.lst -t 1 -d '\t' -n 2 -o c_pos.lst.out
         if test ! -s c_pos.lst.out  ## its an insertion. look for the 4th column
@@ -74,11 +86,17 @@ for i in `cat ${INPUT_GENE_LIST}`; do
           ${FIND_SUB} -i cgene.lst.out -c c_pos.lst -t 1 -d '\t' -n 3 -o c_pos.lst.out
         fi
         expected_value=`cut -f5 c_pos.lst.out |cut -b1 |sort -u`
-        echo "var=$var_value expected=$expected_value"
-        if test $expected_value = "-"
+        if [ $DEBUG_LEVEL -gt 0 ]
+then
+echo "var=$var_value expected=$expected_value"
+fi
+if test $expected_value = "-"
         then
-          echo "insertion"
-          sed /\^/s//$j"	"/g temp.out >>good_SNP.map.tmp
+          if [ $DEBUG_LEVEL -gt 0 ]
+then
+echo "insertion"
+fi
+sed /\^/s//$j"	"/g temp.out >>good_SNP.map.tmp
         else
           if test $var_value != $expected_value
           then

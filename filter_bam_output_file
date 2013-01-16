@@ -32,7 +32,6 @@ fi
 exit 1
 fi
 
-
 ## all the files are used for downstream analysis
 #Puts all the low threshold snps into low_snp.lst
 grep SNP ${lowBAMSnpFile} |cut -f1 |sort -u >low_snp.lst

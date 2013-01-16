@@ -1,12 +1,14 @@
 ##!/bin/sh
 ## the script shall be run in the same directory where the bam.out files are located. i.e. SnpDetect dir
 ## the processes are controled by a file RUN_STEPS
+
 SAMPLE_NAME=$1
 FALSE_SNP_FILE=$2 #or value will be 'no_false_snp'
 #hq
 D_BAM=$3 #cancer genome
 G_BAM=$4 #noncancer genome
-LOG_PATH = $5
+DEBUG_LEVEL = $5
+LOG = $6
 
 RUN_STEPS=run_all_somatic_SNV_steps
 
@@ -24,13 +26,16 @@ then
   echo "annotate_low_tier_mutation" >>${RUN_STEPS}
   echo "modify_SJLLQ" >>${RUN_STEPS}
 fi
-echo "DEBUG: created run_all_somatic_SNV_steps">> $LOG_PATH/log.txt
+
+if [ $DEBUG_LEVEL -gt 2 ]
+then
+  echo "DEBUG: created run_all_somatic_SNV_steps">> $LOG
+fi
 
 ##SCRIPT_DIR=/nfs_exports/apps/internal/scripts
 ##FIND_SUB=/nfs_exports/apps/gnu-apps/NextGen/perlsrc/FindSub.pl
 SCRIPT_DIR=/user/songliu/u2/group/Qiang/Exome/scripts/snp_postprocess/snv_postprocess
 FIND_SUB=$SCRIPT_DIR/FindSub.pl
-  
 
 if test ! -d temp3
 then
@@ -42,48 +47,64 @@ then
   mkdir temp4
 fi
 
-
 LOW_BAM_SNP_FILE=${SAMPLE_NAME}_bam_low.out
 ## LOW_BAM_SNP_FILE=SJMB004_bam_new_low.out
+
 if test ! -s ${LOW_BAM_SNP_FILE}
 then
-  echo "WARNING: Fail to find low-quality compute data ${LOW_BAM_SNP_FILE}" >> $LOG_PATH/log.txt
-  exit 1
+  if [ $DEBUG_LEVEL -gt 0 ]
+  then  
+      echo "WARNING: Fail to find low-quality compute data ${LOW_BAM_SNP_FILE}" >> $LOG
+      exit 1    
+  fi
 fi
 
-
 BAM_GERMLINE_SNP_FILE=${SAMPLE_NAME}_G_bam.out
-
 ## BAM_GERMLINE_SNP_FILE=SJMB004_G_bam.out
+
 if test ! -s ${BAM_GERMLINE_SNP_FILE}
 then
-  echo "WARNING: Fail to find germline SNP file ${SAMPLE_NAME}_G_bam" >> $LOG_PATH/log.txt
+  if [ $DEBUG_LEVEL -gt 0 ]
+  then
+    echo "WARNING: Fail to find germline SNP file ${SAMPLE_NAME}_G_bam" >> $LOG
+  fi
   exit 1
 fi
 
 HIGH_BAM_OLD_FILE=${SAMPLE_NAME}_bam_high_20_old.out
+
 if test ! -s ${HIGH_BAM_OLD_FILE}
 then
-  echo "WARNING: Fail to find the bam file with high quality old results: ${HIGH_BAM_OLD_FILE}" >> $LOG_PATH/log.txt
+  if [ $DEBUG_LEVEL -gt 0 ]
+  then
+    echo "WARNING: Fail to find the bam file with high quality old results: ${HIGH_BAM_OLD_FILE}" >> $LOG
+  fi
 ##  exit 1
 fi
 
 HIGH_BAM_FILE=${SAMPLE_NAME}_bam_high_20.out
+
 if test ! -s ${HIGH_BAM_FILE}
 then
-  echo "WARNING:  Fail to find the bam file with high quality new results: ${HIGH_BAM_FILE}">>$LOG_PATH/log.txt
+  if [ $DEBUG_LEVEL -gt 0 ]
+  then
+    echo "WARNING:  Fail to find the bam file with high quality new results: ${HIGH_BAM_FILE}">>$LOG
+  fi
   exit 1
 fi
-
 
 ## reformat the bam files in both bam_low and bam_high to accomodate the changes required
 if test ! -s ${HIGH_BAM_FILE}.original
 then
   cp ${HIGH_BAM_FILE} ${HIGH_BAM_FILE}.original
 fi
+
 if test ! -s ${HIGH_BAM_FILE}.original
 then
-  echo "WARNING: Fail to copy the original bam file ${HIGH_BAM_FILE}.original" >> $LOG_PATH/log.txt
+  if [ $DEBUG_LEVEL -gt 0 ]
+  then
+    echo "WARNING: Fail to copy the original bam file ${HIGH_BAM_FILE}.original" >> $LOG
+  fi
   exit 1
 fi
 
@@ -94,7 +115,10 @@ fi
 
 if test ! -s ${LOW_BAM_SNP_FILE}.original
 then
-  echo "WARNING:  Fail to copy the original bam file ${LOW_BAM_SNP_FILE}.original" >> $LOG_PATH/log.txt
+  if [ $DEBUG_LEVEL -gt 0 ]
+  then
+    echo "WARNING:  Fail to copy the original bam file ${LOW_BAM_SNP_FILE}.original" >> $LOG
+  fi
   exit 1
 fi
 
@@ -103,13 +127,21 @@ then
   cp ${BAM_GERMLINE_SNP_FILE} ${BAM_GERMLINE_SNP_FILE}.original
 fi
 
+
+if [ $DEBUG_LEVEL -gt 2 ]
+then
+  echo "DEBUG: Beginning find_single_strand_coverage with ${HIGH_BAM_FILE}.original, ${SAMPLE_NAME_high_single_strand_SNV.lst}">>$LOG
+fi
+
 #params are the input and the output file.
-echo "DEBUG: Beginning find_single_strand_coverage with ${HIGH_BAM_FILE}.original, ${SAMPLE_NAME_high_single_strand_SNV.lst"
-${SCRIPT_DIR}/find_single_strand_coverage ${HIGH_BAM_FILE}.original ${SAMPLE_NAME}_high_single_strand_SNV.lst $LOG_PATH
-echo "DEBUG: Beginning find_single_strand_coverage with ${LOW_BAM_SNP_FILE}.original, ${SAMPLE_NAME_low_single_strand_SNV.lst"
-${SCRIPT_DIR}/find_single_strand_coverage ${LOW_BAM_SNP_FILE}.original ${SAMPLE_NAME}_low_single_strand_SNV.lst $LOG_PATH
+${SCRIPT_DIR}/find_single_strand_coverage ${HIGH_BAM_FILE}.original ${SAMPLE_NAME}_high_single_strand_SNV.lst $DEBUG_LEVEL $LOG 
 
+if [ $DEBUG_LEVEL -gt 2 ]
+then
+  echo "DEBUG: Beginning find_single_strand_coverage with ${LOW_BAM_SNP_FILE}.original, ${SAMPLE_NAME_low_single_strand_SNV.lst}" >>$LOG
+fi
 
+${SCRIPT_DIR}/find_single_strand_coverage ${LOW_BAM_SNP_FILE}.original ${SAMPLE_NAME}_low_single_strand_SNV.lst $DEBUG_LEVEL $LOG 
 
 ## those that have good coverage in the other orientation should not be considered bad
 ## single-strand status was only given to those that have poor coverage e.g. <10x in one orientation
@@ -120,8 +152,6 @@ ${SCRIPT_DIR}/find_single_strand_coverage ${LOW_BAM_SNP_FILE}.original ${SAMPLE_
 ## grep SNP ${HIGH_BAM_FILE}.original |awk '{if($29 ==0 && (($25 >=3 && $22 >=10) || ($26 >=3 && $21 >=10))) printf("%s\n", $3)}' |sort -u >skip_single_strand.lst
 
 grep SNP ${HIGH_BAM_FILE}.original |awk '{if($29 ==0 && (($25 >=3 && $22 <=4) || ($26 >=3 && $21 <=4))) printf("%s\n", $3)}' |sort -u >skip_single_strand.lst #takes any single strand that has good quality in one direction OR the other direction and puts it in 'skip_single_strand.lst'  Single strands are not trustworthy unless they have high coverage.  Then we will bump them from the 'single strand' classification into the good list.
-
-
 
 #This whole area makes the new *_high_single_strand.lst, which has every read that: IS an element from High_single_strand_snv AND IS NOT an element of the skip_single_strand.lst file
 #Filters out the ones in the skip_single_strand file so we only have the single strand reads that do not have good coverage.
@@ -135,9 +165,9 @@ mv u ${SAMPLE_NAME}_high_single_strand_SNV.lst
 
 
 cat ${SAMPLE_NAME}_high_single_strand_SNV.lst ${SAMPLE_NAME}_low_single_strand_SNV.lst |sort -u >${SAMPLE_NAME}_single_strand_SNV.lst 
-#################################################################################################
+
 #combines the high and the low snv files into a master list of single strands.  I am inferring there is a purpose for splitting them up and the recombining them.
-######################################################################################
+
 ## rm ${SAMPLE_NAME}_high_single_strand_SNV.lst
 ## rm ${SAMPLE_NAME}_low_single_strand_SNV.lst
 
@@ -148,10 +178,9 @@ cut -f 3-13,15-18,27-35 ${BAM_GERMLINE_SNP_FILE}.original >${BAM_GERMLINE_SNP_FI
 
 ##The dbSNP is important because it has all the known SNPs with data about them.
 ## this script modifies the low_bam.out file by adding the database realSNP# to it. This avoids dbSNP markers being called somatic in low_bam.out because the run does not include the dbSNP check
-${SCRIPT_DIR}/add_refSNP2low_bam ${SAMPLE_NAME}
+${SCRIPT_DIR}/add_refSNP2low_bam ${SAMPLE_NAME} $LOG $DEBUG_LEVEL
 
 ## low-confidence calls were run without using dbSNP. It needs to be patched for dbSNP markers
-
 
 #search for everything that DOES NOT say not_run in RUN_STEPS and put it in RUN_STEPS.current 
 ##My first order logic is telling me this means put every step completed so far and put it in this file
@@ -166,253 +195,371 @@ for k in `cat ${RUN_STEPS}.current`; do
 #If one of the completed steps is 'compute_low_somatic_snp'
 ## collect the *_bam_input.txt file so that those that are not included will be part of low autoatmically
 ##I think filter_bam_output_file is just checking to be sure every High read is in low.  Jianmin thinks so too.
-   if test $k = compute_low_somatic_snp
-   then
-     echo "start: ${SCRIPT_DIR}/filter_bam_output_file ${LOW_BAM_SNP_FILE} ${HIGH_BAM_FILE} ${SAMPLE_NAME}_bam_input.txt"
-     ${SCRIPT_DIR}/filter_bam_output_file ${LOW_BAM_SNP_FILE} ${HIGH_BAM_FILE} ${SAMPLE_NAME}_bam_input.txt
-     echo "finish: ${SCRIPT_DIR}/filter_bam_output_file ${LOW_BAM_SNP_FILE} ${HIGH_BAM_FILE} ${SAMPLE_NAME}_bam_input.txt"
-     if test ! -s ${SAMPLE_NAME}_bam_input.txt
-     then
-       echo "fail to create ${SAMPLE_NAME}_bam_input.txt"
-       exit 1
-     fi
+if test $k = compute_low_somatic_snp
+then
+  if [ $DEBUG_LEVEL -gt 2 ]
+  then
+    echo "DEBUG: begin: ${SCRIPT_DIR}/filter_bam_output_file ${LOW_BAM_SNP_FILE} ${HIGH_BAM_FILE} ${SAMPLE_NAME}_bam_input.txt">>$LOG
+  fi
+
+${SCRIPT_DIR}/filter_bam_output_file ${LOW_BAM_SNP_FILE} ${HIGH_BAM_FILE} ${SAMPLE_NAME}_bam_input.txt $LOG $DEBUG_LEVEL
+
+  if [ $DEBUG_LEVEL -gt 2 ]
+  then
+     echo "DEBUG: finish: ${SCRIPT_DIR}/filter_bam_output_file ${LOW_BAM_SNP_FILE} ${HIGH_BAM_FILE} ${SAMPLE_NAME}_bam_input.txt">>$LOG
+  fi
+  
+  if test ! -s ${SAMPLE_NAME}_bam_input.txt
+  then
+  
+    if [ $DEBUG_LEVEL -gt 0 ]
+    then
+       echo "WARNING: fail to create ${SAMPLE_NAME}_bam_input.txt"
+    fi
+   exit 1
+  fi
 ## to remove the dbSNP status for SNPS in the OMIM_valid_snp_loc.lst (by Xiang Chen, 11/09/2010)
-     java -classpath /user/songliu/u2/group/Qiang/Exome/scripts/snp_postprocess/snv_postprocess/stjude_java/ AddOMIMdbSNP ${SAMPLE_NAME} /user/songliu/u2/group/Qiang/Exome/scripts/snp_postprocess/snv_postprocess/OMIM_valid_snp_loc.lst
+  java -classpath /user/songliu/u2/group/Qiang/Exome/scripts/snp_postprocess/snv_postprocess/stjude_java/ AddOMIMdbSNP ${SAMPLE_NAME} /user/songliu/u2/group/Qiang/Exome/scripts/snp_postprocess/snv_postprocess/OMIM_valid_snp_loc.lst
      mv ${SAMPLE_NAME}_bam_input.txt.clean ${SAMPLE_NAME}_bam_input.txt
-   fi
+fi
 
 ## analyze the data using low-quality file first. GUESS: We are subtracting the snps from the entire list to be left only with the snvs.the results are 
-  if test $k = compute_low_somatic_snp
+if test $k = compute_low_somatic_snp
+then
+
+  if [ $DEBUG_LEVEL -gt 2 ]
   then
-    echo "start: ${SCRIPT_DIR}/collect_sub_somatic_snp ${LOW_BAM_SNP_FILE} ${SAMPLE_NAME} ${FALSE_SNP_FILE} 90 ${BAM_GERMLINE_SNP_FILE} ${SAMPLE_NAME}_log_file.txt ${SAMPLE_NAME}_single_strand_SNV.lst"
+    echo "DEBUG: start: ${SCRIPT_DIR}/collect_sub_somatic_snp ${LOW_BAM_SNP_FILE} ${SAMPLE_NAME} ${FALSE_SNP_FILE} 90 ${BAM_GERMLINE_SNP_FILE} ${SAMPLE_NAME}_log_file.txt ${SAMPLE_NAME}_single_strand_SNV.lst" >> $LOG
+  fi
+
 ## create a temp file that includes both low and the highs not included in the bam_input.txt file
-    grep SNP  ${HIGH_BAM_FILE} |cut -f1 |sort -u >high_snp.lst
+  grep SNP ${HIGH_BAM_FILE} |cut -f1 |sort -u >high_snp.lst
+
 ## high_N_low_snp.lst was generated from the process filter_bam_output_file
-    cat high_snp.lst high_N_low_snp.lst |sort |uniq -u >u
-    cp ${LOW_BAM_SNP_FILE} ${LOW_BAM_SNP_FILE}.tmp
+  cat high_snp.lst high_N_low_snp.lst |sort |uniq -u >u
+  cp ${LOW_BAM_SNP_FILE} ${LOW_BAM_SNP_FILE}.tmp
 
 #if there are any non-high  (low?) snps 
-    if test -s u
-    then
+  if test -s u
+  then
+
 #make a file of all the low snps called *.left
-      ${FIND_SUB} -i ${HIGH_BAM_FILE} -c u -d '\t' -n 0 -t 1 -o ${HIGH_BAM_FILE}.left 
+    ${FIND_SUB} -i ${HIGH_BAM_FILE} -c u -d '\t' -n 0 -t 1 -o ${HIGH_BAM_FILE}.left
+
 #if there are some low snps, put them into the temporary LOW_BAM_SNP_FILE.tmp
-      if test -s ${HIGH_BAM_FILE}.left
-      then
+    if test -s ${HIGH_BAM_FILE}.left
+    then
         cat ${HIGH_BAM_FILE}.left >>${LOW_BAM_SNP_FILE}.tmp
         rm ${HIGH_BAM_FILE}.left
-      fi
-
-#grab any snp from 'u' that is in *_high_single_strand and put it also in the *_low_single_strand_SNV.lst file since high is a subset of low
-      cat u ${SAMPLE_NAME}_high_single_strand_SNV.lst |sort |uniq -d >>${SAMPLE_NAME}_low_single_strand_SNV.lst
     fi
 
-    cp ${SAMPLE_NAME}_low_single_strand_SNV.lst ${SAMPLE_NAME}_single_strand_SNV.lst
-
-
-    ${SCRIPT_DIR}/collect_sub_somatic_snp ${LOW_BAM_SNP_FILE}.tmp ${SAMPLE_NAME} ${FALSE_SNP_FILE} 90 ${BAM_GERMLINE_SNP_FILE} ${SAMPLE_NAME}_log_file.txt ${SAMPLE_NAME}_single_strand_SNV.lst
-    echo "finish: ${SCRIPT_DIR}/collect_sub_somatic_snp ${LOW_BAM_SNP_FILE}.tmp ${SAMPLE_NAME} ${FALSE_SNP_FILE} 90 ${BAM_GERMLINE_SNP_FILE} ${SAMPLE_NAME}_log_file.txt ${SAMPLE_NAME}_single_strand_SNV.lst"
-    rm ${LOW_BAM_SNP_FILE}.tmp
-    mv ${SAMPLE_NAME}_*confidence* temp3/.
-    mv fisher_output.txt temp3/${SAMPLE_NAME}_fisher_output.txt
+#grab any snp from 'u' that is in *_high_single_strand and put it also in the *_low_single_strand_SNV.lst file since high is a subset of low
+    cat u ${SAMPLE_NAME}_high_single_strand_SNV.lst |sort |uniq -d >>${SAMPLE_NAME}_low_single_strand_SNV.lst
   fi
 
-  if test $k = compute_high_somatic_snp
+  cp ${SAMPLE_NAME}_low_single_strand_SNV.lst ${SAMPLE_NAME}_single_strand_SNV.lst
+
+  ${SCRIPT_DIR}/collect_sub_somatic_snp ${LOW_BAM_SNP_FILE}.tmp ${SAMPLE_NAME} ${FALSE_SNP_FILE} 90 ${BAM_GERMLINE_SNP_FILE} ${SAMPLE_NAME}_log_file.txt ${SAMPLE_NAME}_single_strand_SNV.lst
+
+  if [ $DEBUG_LEVEL -gt 2 ]
   then
-## now do the analysis using high-quality data
-    echo "start ${SCRIPT_DIR}/collect_sub_somatic_snp ${SAMPLE_NAME}_bam_input.txt ${SAMPLE_NAME} ${FALSE_SNP_FILE} 90  ${BAM_GERMLINE_SNP_FILE} ${SAMPLE}_logfile.txt ${SAMPLE_NAME}_single_strand_SNV.lst"
-
-#once all the fiddling is done, copy over the high_single_strand (which has all the strands, since high is a subset of low) and just call it *_single_strand_snv
-    cp ${SAMPLE_NAME}_high_single_strand_SNV.lst ${SAMPLE_NAME}_single_strand_SNV.lst
-
-
-    ${SCRIPT_DIR}/collect_sub_somatic_snp ${SAMPLE_NAME}_bam_input.txt ${SAMPLE_NAME} ${FALSE_SNP_FILE} 90  ${BAM_GERMLINE_SNP_FILE} ${SAMPLE}_logfile.txt ${SAMPLE_NAME}_single_strand_SNV.lst
-    echo "finish ${SCRIPT_DIR}/collect_sub_somatic_snp ${SAMPLE_NAME}_bam_input.txt ${SAMPLE_NAME} ${FALSE_SNP_FILE} 90  ${BAM_GERMLINE_SNP_FILE} ${SAMPLE}_logfile.txt ${SAMPLE_NAME}_single_strand_SNV.lst"
+      echo "DEBUG: finish: ${SCRIPT_DIR}/collect_sub_somatic_snp ${LOW_BAM_SNP_FILE}.tmp ${SAMPLE_NAME} ${FALSE_SNP_FILE} 90 ${BAM_GERMLINE_SNP_FILE} ${SAMPLE_NAME}_log_file.txt ${SAMPLE_NAME}_single_strand_SNV.lst" >> $LOG
   fi
+
+  rm ${LOW_BAM_SNP_FILE}.tmp
+  mv ${SAMPLE_NAME}_*confidence* temp3/.
+  mv fisher_output.txt temp3/${SAMPLE_NAME}_fisher_output.txt
+fi
+
+  
+
+if test $k = compute_high_somatic_snp
+then
+## now do the analysis using high-quality data
+  if [ $DEBUG_LEVEL -gt 2 ]
+  then
+    echo "DEBUG: start ${SCRIPT_DIR}/collect_sub_somatic_snp ${SAMPLE_NAME}_bam_input.txt ${SAMPLE_NAME} ${FALSE_SNP_FILE} 90  ${BAM_GERMLINE_SNP_FILE} ${SAMPLE}_logfile.txt ${SAMPLE_NAME}_single_strand_SNV.lst">>$LOG
+  fi
+#copy over the high_single_strand (which has all the strands, since high is a subset of low) and just call it *_single_strand_snv
+  cp ${SAMPLE_NAME}_high_single_strand_SNV.lst ${SAMPLE_NAME}_single_strand_SNV.lst
+
+  ${SCRIPT_DIR}/collect_sub_somatic_snp ${SAMPLE_NAME}_bam_input.txt ${SAMPLE_NAME} ${FALSE_SNP_FILE} 90  ${BAM_GERMLINE_SNP_FILE} ${SAMPLE_NAME}_single_strand_SNV.lst $LOG $DEBUG_LEVEL
+  if [ $DEBUG_LEVEL -gt 2 ]
+  then
+    if [ $DEBUG_LEVEL -gt 2 ]
+    then
+      echo "finish ${SCRIPT_DIR}/collect_sub_somatic_snp ${SAMPLE_NAME}_bam_input.txt ${SAMPLE_NAME} ${FALSE_SNP_FILE} 90  ${BAM_GERMLINE_SNP_FILE} ${SAMPLE}_logfile.txt ${SAMPLE_NAME}_single_strand_SNV.lst">>$LOG
+    fi
+  fi
+fi
+
 
 ## merge the poor quality data with good quality data
-  if test $k = merge_low_N_high
+if test $k = merge_low_N_high
+then
+  if [ $DEBUG_LEVEL -gt 0 ]
   then
-    echo "start ${SCRIPT_DIR}/merge_confidence_file `pwd` `pwd`/temp3 ${SAMPLE_NAME} ${HIGH_BAM_FILE} `pwd`/temp4"
-    cp temp3/${SAMPLE_NAME}_*confidence* .
-    ${SCRIPT_DIR}/merge_confidence_file `pwd`/temp3 `pwd` ${SAMPLE_NAME} ${HIGH_BAM_FILE} `pwd`/temp4
-    echo "end ${SCRIPT_DIR}/merge_confidence_file `pwd` `pwd`/temp3 ${SAMPLE_NAME} ${HIGH_BAM_FILE} `pwd`/temp4"
+    echo "DEBUG: start ${SCRIPT_DIR}/merge_confidence_file `pwd` `pwd`/temp3 ${SAMPLE_NAME} ${HIGH_BAM_FILE} `pwd`/temp4"
   fi
 
-## copy the merged file to the processing dir
-  if test $k = copy_merged_file
+  cp temp3/${SAMPLE_NAME}_*confidence* .
+  ${SCRIPT_DIR}/merge_confidence_file `pwd`/temp3 `pwd` ${SAMPLE_NAME} ${HIGH_BAM_FILE} `pwd`/temp4 $LOG $DEBUG_LEVEL
+  
+  if [ $DEBUG_LEVEL -gt 2 ]
   then
-    cp temp4/${SAMPLE_NAME}_* .
+    echo "end ${SCRIPT_DIR}/merge_confidence_file `pwd` `pwd`/temp3 ${SAMPLE_NAME} ${HIGH_BAM_FILE} `pwd`/temp4">>$LOG
   fi
+fi
+
+## copy the merged file to the processing dir
+if test $k = copy_merged_file
+then
+  cp temp4/${SAMPLE_NAME}_* .
+fi
 
 
 ## start to annotate the somatic mutations by generating *_validate_somatic_loci.txt and *_sub_sum.txt
-  if test $k = annotate_putative_mutation
+if test $k = annotate_putative_mutation
+then
+  if [ $DEBUG_LEVEL -gt 2 ]
   then
-    echo "start ${SCRIPT_DIR}/annotate_putative_somatic_mutation ${SAMPLE_NAME} `pwd` ${FALSE_SNP_FILE}"
-    ${SCRIPT_DIR}/annotate_putative_somatic_mutation ${SAMPLE_NAME} `pwd` ${FALSE_SNP_FILE}
-    echo "end ${SCRIPT_DIR}/annotate_putative_somatic_mutation ${SAMPLE_NAME} `pwd` ${FALSE_SNP_FILE}"
+    echo "start ${SCRIPT_DIR}/annotate_putative_somatic_mutation ${SAMPLE_NAME} `pwd` ${FALSE_SNP_FILE}">>$LOG
+  fi
 
-    if test ! -s ${SAMPLE_NAME}_validate_somatic_loci.txt
+  ${SCRIPT_DIR}/annotate_putative_somatic_mutation ${SAMPLE_NAME} `pwd` ${FALSE_SNP_FILE}
+  
+  if [ $DEBUG_LEVEL -gt 2 ]
+  then
+    echo "end ${SCRIPT_DIR}/annotate_putative_somatic_mutation ${SAMPLE_NAME} `pwd` ${FALSE_SNP_FILE}">>$LOG
+  fi
+
+if test ! -s ${SAMPLE_NAME}_validate_somatic_loci.txt
+  then
+    if [ $DEBUG_LEVEL -gt 0 ]
     then
-      echo "Fail to generate ${SAMPLE_NAME}_validate_somatic_loci.txt"
-      exit 1
-    else
-      sort -u ${SAMPLE_NAME}_validate_somatic_loci.txt >${SAMPLE_NAME}_validate_somatic_loci.txt.sort
-      mv ${SAMPLE_NAME}_validate_somatic_loci.txt.sort ${SAMPLE_NAME}_validate_somatic_loci.txt
+      echo "Fail to generate ${SAMPLE_NAME}_validate_somatic_loci.txt">>$LOG
     fi
+  exit 1
+else
+  sort -u ${SAMPLE_NAME}_validate_somatic_loci.txt >${SAMPLE_NAME}_validate_somatic_loci.txt.sort
+  mv ${SAMPLE_NAME}_validate_somatic_loci.txt.sort ${SAMPLE_NAME}_validate_somatic_loci.txt
+fi
 
-    if test ! -s ${SAMPLE_NAME}_sub_sum.txt
-    then
-      echo "Fail to generate ${SAMPLE_NAME}_sub_sum.txt"
-      exit 1
-    else
+if test ! -s ${SAMPLE_NAME}_sub_sum.txt
+then
+  if [ $DEBUG_LEVEL -gt 0 ]
+  then
+    echo "Fail to generate ${SAMPLE_NAME}_sub_sum.txt">>$LOG
+  fi
+  
+  exit 1
+  else
       grep Gene ${SAMPLE_NAME}_sub_sum.txt >${SAMPLE_NAME}_sub_sum.txt.sort
       grep -v Gene ${SAMPLE_NAME}_sub_sum.txt |sort -u >>${SAMPLE_NAME}_sub_sum.txt.sort
       mv ${SAMPLE_NAME}_sub_sum.txt.sort ${SAMPLE_NAME}_sub_sum.txt
-    fi
   fi
+fi
 
 ## start to run gene annotation
-  if test $k = run_gene_annotation
+if test $k = run_gene_annotation
+then
+  if test ! -s run_all_annotation_steps
   then
-    if test ! -s run_all_annotation_steps
-    then
-      echo "prepare_geneName2geneID" >run_all_annotation_steps
-      echo "make_gene_fasta" >>run_all_annotation_steps
-      echo "generate_TCGA_sequence" >>run_all_annotation_steps
-      echo "map_all_somatic_mutation" >>run_all_annotation_steps
-      echo "summarize_results" >>run_all_annotation_steps
-    fi
-
-    if test -s ${SAMPLE_NAME}_putative_somatic_mutation.txt
-    then
-      rm ${SAMPLE_NAME}_putative_somatic_mutation.txt
-    fi
-    echo "start ${SCRIPT_DIR}/run_gene_annotation4NextGen `pwd`/${SAMPLE_NAME}_validate_somatic_loci.txt `pwd`/${SAMPLE_NAME}_sub_sum.txt `pwd`/temp/SOMATIC_RESULTS `pwd`/run_all_annotation_steps `pwd`/${SAMPLE_NAME}_putative_somatic_mutation.txt"
-    echo ${SAMPLE_NAME} >sample.lst
-    cp sample.lst temp/SOMATIC_RESULTS/.
-    ${SCRIPT_DIR}/run_gene_annotation4NextGen `pwd`/${SAMPLE_NAME}_validate_somatic_loci.txt `pwd`/${SAMPLE_NAME}_sub_sum.txt `pwd`/temp/SOMATIC_RESULTS `pwd`/run_all_annotation_steps `pwd`/${SAMPLE_NAME}_putative_somatic_mutation.txt
-    echo "end ${SCRIPT_DIR}/run_gene_annotation4NextGen `pwd`/${SAMPLE_NAME}_validate_somatic_loci.txt `pwd`/${SAMPLE_NAME}_sub_sum.txt `pwd`/temp/SOMATIC_RESULTS `pwd`/run_all_annotation_steps `pwd`/${SAMPLE_NAME}_putative_somatic_mutation.txt"
-
-    if test ! -s ${SAMPLE_NAME}_putative_somatic_mutation.txt
-    then
-      echo "Fail to generate ${SAMPLE_NAME}_putative_somatic_mutation.txt in run_gene_anntation"
-      exit 1
-    fi
-
-    ${SCRIPT_DIR}/filter_duplicate_somatic_mutation_file ${SAMPLE_NAME}_putative_somatic_mutation.txt ${SAMPLE_NAME}_putative_somatic_mutation.txt.mod
-    if test ! -s ${SAMPLE_NAME}_putative_somatic_mutation.txt.mod
-    then
-      echo "Fail in filter_duplicate_somatic_mutation_file for ${SAMPLE_NAME}"
-      exit 1
-    fi
-    mv ${SAMPLE_NAME}_putative_somatic_mutation.txt.mod ${SAMPLE_NAME}_putative_somatic_mutation.txt
+    echo "prepare_geneName2geneID" >run_all_annotation_steps
+    echo "make_gene_fasta" >>run_all_annotation_steps
+    echo "generate_TCGA_sequence" >>run_all_annotation_steps
+    echo "map_all_somatic_mutation" >>run_all_annotation_steps
+    echo "summarize_results" >>run_all_annotation_steps
   fi
 
-## create the Excel file for tier1 list
-  if test $k = create_excel_sheet
+  if test -s ${SAMPLE_NAME}_putative_somatic_mutation.txt
   then
-    cp ${SAMPLE_NAME}_putative_somatic_mutation.txt ${SAMPLE_NAME}_tier1_putative_mutation.txt
-    java -jar /user/songliu/u2/group/Qiang/Exome/scripts/snp_postprocess/snv_postprocess/TabToExcel.jar ${SAMPLE_NAME}_tier1_putative_mutation.txt ${D_BAM} ${G_BAM}
+    rm ${SAMPLE_NAME}_putative_somatic_mutation.txt
+  fi
+  
+  if [ $DEBUG_LEVEL -gt 2 ]
+  then
+    echo "DEBUG: start ${SCRIPT_DIR}/run_gene_annotation4NextGen `pwd`/${SAMPLE_NAME}_validate_somatic_loci.txt `pwd`/${SAMPLE_NAME}_sub_sum.txt `pwd`/temp/SOMATIC_RESULTS `pwd`/run_all_annotation_steps `pwd`/${SAMPLE_NAME}_putative_somatic_mutation.txt">>$LOG
   fi
 
-  if test $k = annotate_low_tier_mutation
+  echo ${SAMPLE_NAME} >sample.lst
+    
+  cp sample.lst temp/SOMATIC_RESULTS/.
+  
+  ${SCRIPT_DIR}/run_gene_annotation4NextGen `pwd`/${SAMPLE_NAME}_validate_somatic_loci.txt `pwd`/${SAMPLE_NAME}_sub_sum.txt `pwd`/temp/SOMATIC_RESULTS `pwd`/run_all_annotation_steps `pwd`/${SAMPLE_NAME}_putative_somatic_mutation.txt
+  
+  if [ $DEBUG_LEVEL -gt 2 ]
   then
-    echo "start ${SCRIPT_DIR}/annotate_lowtier_somatic_mutation ${SAMPLE_NAME} `pwd` `pwd`/${FALSE_SNP_FILE}"
-    ${SCRIPT_DIR}/annotate_lowtier_somatic_mutation ${SAMPLE_NAME} `pwd` `pwd`/${FALSE_SNP_FILE}
-    echo "end ${SCRIPT_DIR}/annotate_lowtier_somatic_mutation ${SAMPLE_NAME} `pwd` `pwd`/${FALSE_SNP_FILE}"
+    echo "DEBUG: end ${SCRIPT_DIR}/run_gene_annotation4NextGen `pwd`/${SAMPLE_NAME}_validate_somatic_loci.txt `pwd`/${SAMPLE_NAME}_sub_sum.txt `pwd`/temp/SOMATIC_RESULTS `pwd`/run_all_annotation_steps `pwd`/${SAMPLE_NAME}_putative_somatic_mutation.txt"
+  fi
+  
+  if test ! -s ${SAMPLE_NAME}_putative_somatic_mutation.txt
+  then
+      
+    if [ $DEBUG_LEVEL -gt 0 ]
+    then
+      echo "WARNING: Fail to generate ${SAMPLE_NAME}_putative_somatic_mutation.txt in run_gene_anntation">>$LOG
+    fi
+      
+    exit 1
+  fi
+
+
+  ${SCRIPT_DIR}/filter_duplicate_somatic_mutation_file ${SAMPLE_NAME}_putative_somatic_mutation.txt ${SAMPLE_NAME}_putative_somatic_mutation.txt.mod
+    
+  if test ! -s ${SAMPLE_NAME}_putative_somatic_mutation.txt.mod
+  then
+    if [ $DEBUG_LEVEL -gt 0 ]
+    then
+      echo "WARNING: Fail in filter_duplicate_somatic_mutation_file for ${SAMPLE_NAME}">>$LOG
+    fi
+
+    exit 1
   fi
     
-  if test $k = modify_SJLLQ
+    mv ${SAMPLE_NAME}_putative_somatic_mutation.txt.mod ${SAMPLE_NAME}_putative_somatic_mutation.txt
+fi
+
+## create the Excel file for tier1 list
+if test $k = create_excel_sheet
+
+then
+  cp ${SAMPLE_NAME}_putative_somatic_mutation.txt ${SAMPLE_NAME}_tier1_putative_mutation.txt
+  java -jar /user/songliu/u2/group/Qiang/Exome/scripts/snp_postprocess/snv_postprocess/TabToExcel.jar ${SAMPLE_NAME}_tier1_putative_mutation.txt ${D_BAM} ${G_BAM}
+fi
+
+if test $k = annotate_low_tier_mutation
+then
+  if [ $DEBUG_LEVEL -gt 2 ]
   then
-    if test ! -s temp3/${SAMPLE_NAME}_low_confidence_somatic_snp.txt.new.2
+    echo "start ${SCRIPT_DIR}/annotate_lowtier_somatic_mutation ${SAMPLE_NAME} `pwd` `pwd`/${FALSE_SNP_FILE}">>$LOG
+  fi
+
+  ${SCRIPT_DIR}/annotate_lowtier_somatic_mutation ${SAMPLE_NAME} `pwd` `pwd`/${FALSE_SNP_FILE} $LOG $DEBUG_LEVEL
+    
+  if [ $DEBUG_LEVEL -gt 2 ]
+  then
+    echo "end ${SCRIPT_DIR}/annotate_lowtier_somatic_mutation ${SAMPLE_NAME} `pwd` `pwd`/${FALSE_SNP_FILE}">>$LOG
+  fi
+fi
+    
+if test $k = modify_SJLLQ
+then
+  if test ! -s temp3/${SAMPLE_NAME}_low_confidence_somatic_snp.txt.new.2
+  then
+    if [ $DEBUG_LEVEL -gt 0 ]
     then
-      echo "Fail to find the additional variants that only appeared at the low level analysis"
-      exit 1
+      echo "Fail to find the additional variants that only appeared at the low level analysis">>$LOG
     fi
+  fi
+  
+  exit 1
+fi
 
 
 ## modify the tiers 1-4 by adding the SJLLQ type
-    echo "start modifying the SJLLQ type"
-    cut -f2,3 temp3/${SAMPLE_NAME}_low_confidence_somatic_snp.txt.new.2 >LL_snp.lst
+if [ $DEBUG_LEVEL -gt 2 ]
+then
+  echo "start modifying the SJLLQ type">>$LOG
+fi
+
+cut -f2,3 temp3/${SAMPLE_NAME}_low_confidence_somatic_snp.txt.new.2 >LL_snp.lst
 ## this group may also look suspicious
+if test -s LQ_snp.lst
+then
+  rm LQ_snp.lst
+fi
+    
+if test -s temp3/${SAMPLE_NAME}_high_confidence_somatic_snp.txt.new.2
+then
+  cut -f2,3 temp3/${SAMPLE_NAME}_high_confidence_somatic_snp.txt.new.2 >LQ_snp.lst
+fi
+
+echo "1" >t.lst
+echo "2" >>t.lst
+echo "3" >>t.lst
+echo "4" >>t.lst
+
+for i in `cat t.lst`; do
+  if test -s ${SAMPLE_NAME}_tier${i}_putative_mutation.txt
+  then
+    fgrep -f LL_snp.lst ${SAMPLE_NAME}_tier${i}_putative_mutation.txt >LL_snp.lst.out
+    if test -s LQ_snp.lst.out
+    then
+      rm LQ_snp.lst.out
+    fi
+    
     if test -s LQ_snp.lst
     then
-      rm LQ_snp.lst
+      fgrep -f LQ_snp.lst ${SAMPLE_NAME}_tier${i}_putative_mutation.txt >LQ_snp.lst.out
     fi
-    if test -s temp3/${SAMPLE_NAME}_high_confidence_somatic_snp.txt.new.2
+     
+    if test -s LQ_snp.lst.out
     then
-      cut -f2,3 temp3/${SAMPLE_NAME}_high_confidence_somatic_snp.txt.new.2 >LQ_snp.lst
+      fgrep -f LQ_snp.lst -v ${SAMPLE_NAME}_tier${i}_putative_mutation.txt >${SAMPLE_NAME}_tier${i}_putative_mutation.txt.clean
+      sed /SJHQ/s//SJHLQ/g LQ_snp.lst.out >>${SAMPLE_NAME}_tier${i}_putative_mutation.txt.clean
+      mv ${SAMPLE_NAME}_tier${i}_putative_mutation.txt.clean ${SAMPLE_NAME}_tier${i}_putative_mutation.txt
     fi
-    echo "1" >t.lst
-    echo "2" >>t.lst
-    echo "3" >>t.lst
-    echo "4" >>t.lst
-    for i in `cat t.lst`; do
-      if test -s ${SAMPLE_NAME}_tier${i}_putative_mutation.txt
-      then
-        fgrep -f LL_snp.lst ${SAMPLE_NAME}_tier${i}_putative_mutation.txt >LL_snp.lst.out
-        if test -s LQ_snp.lst.out
-        then
-          rm LQ_snp.lst.out
-        fi
-        if test -s LQ_snp.lst
-        then
-          fgrep -f LQ_snp.lst ${SAMPLE_NAME}_tier${i}_putative_mutation.txt >LQ_snp.lst.out
-        fi
-        if test -s LQ_snp.lst.out
-        then
-          fgrep -f LQ_snp.lst -v ${SAMPLE_NAME}_tier${i}_putative_mutation.txt >${SAMPLE_NAME}_tier${i}_putative_mutation.txt.clean
-          sed /SJHQ/s//SJHLQ/g LQ_snp.lst.out >>${SAMPLE_NAME}_tier${i}_putative_mutation.txt.clean
-          mv ${SAMPLE_NAME}_tier${i}_putative_mutation.txt.clean ${SAMPLE_NAME}_tier${i}_putative_mutation.txt
-        fi
-        if test -s LL_snp.lst.out
-        then
-          fgrep -f LL_snp.lst -v ${SAMPLE_NAME}_tier${i}_putative_mutation.txt >${SAMPLE_NAME}_tier${i}_putative_mutation.txt.clean
-          sed /SJLQ/s//SJLLQ/g LL_snp.lst.out |sed /SJHQ/s//SJLLQ/g >>${SAMPLE_NAME}_tier${i}_putative_mutation.txt.clean
-          mv ${SAMPLE_NAME}_tier${i}_putative_mutation.txt.clean ${SAMPLE_NAME}_tier${i}_putative_mutation.txt
-        fi
-      fi
+        
+    if test -s LL_snp.lst.out
+    then
+      fgrep -f LL_snp.lst -v ${SAMPLE_NAME}_tier${i}_putative_mutation.txt >${SAMPLE_NAME}_tier${i}_putative_mutation.txt.clean
+      sed /SJLQ/s//SJLLQ/g LL_snp.lst.out |sed /SJHQ/s//SJLLQ/g >>${SAMPLE_NAME}_tier${i}_putative_mutation.txt.clean
+      mv ${SAMPLE_NAME}_tier${i}_putative_mutation.txt.clean ${SAMPLE_NAME}_tier${i}_putative_mutation.txt
+    fi
+  fi
 
 ## clean-up the duplicate records
-      if test -s ${SAMPLE_NAME}_tier${i}_putative_mutation.txt
+  if test -s ${SAMPLE_NAME}_tier${i}_putative_mutation.txt
+  then
+    ${SCRIPT_DIR}/filter_duplicate_somatic_mutation_file ${SAMPLE_NAME}_tier${i}_putative_mutation.txt ${SAMPLE_NAME}_tier${i}_putative_mutation.txt.mod
+    
+    if test ! -s ${SAMPLE_NAME}_tier${i}_putative_mutation.txt.mod
+    then
+      if [ $DEBUG_LEVEL -gt 0 ]
       then
-        ${SCRIPT_DIR}/filter_duplicate_somatic_mutation_file ${SAMPLE_NAME}_tier${i}_putative_mutation.txt ${SAMPLE_NAME}_tier${i}_putative_mutation.txt.mod
-        if test ! -s ${SAMPLE_NAME}_tier${i}_putative_mutation.txt.mod
-        then
-          echo "Fail in filter_duplicate_somatic_mutation_file for ${SAMPLE_NAME}_tier${i}_putative_mutation.txt"
-          exit 1
-        fi
-        mv ${SAMPLE_NAME}_tier${i}_putative_mutation.txt.mod ${SAMPLE_NAME}_tier${i}_putative_mutation.txt
+        echo "WARNING: Fail in filter_duplicate_somatic_mutation_file for ${SAMPLE_NAME}_tier${i}_putative_mutation.txt">>$LOG
       fi
+    
+    exit 1
+    fi
+  
+  mv ${SAMPLE_NAME}_tier${i}_putative_mutation.txt.mod ${SAMPLE_NAME}_tier${i}_putative_mutation.txt
+  fi
+done
+    
+java -jar /user/songliu/u2/group/Qiang/Exome/scripts/snp_postprocess/snv_postprocess/TabToExcel.jar ${SAMPLE_NAME}_tier1_putative_mutation.txt
 
-    done
-    java -jar /user/songliu/u2/group/Qiang/Exome/scripts/snp_postprocess/snv_postprocess/TabToExcel.jar ${SAMPLE_NAME}_tier1_putative_mutation.txt
-    echo "finish modifying the SJLLQ type"
+if [ $DEBUG_LEVEL -gt 2 ]
+then
+  echo "DEBUG: finish modifying the SJLLQ type">>$LOG
+fi
+
 
 ## create input file for running SNV check. Use that for tier1 only for now
 ## collect the dbSNP#
-    cat ${SAMPLE}*confidence* |grep rs |cut -f2,3 |sort -u >rs_num.lst
+cat ${SAMPLE}*confidence* |grep rs |cut -f2,3 |sort -u >rs_num.lst
 ## collect those that have less than <=5 mutant alleles in tumor or germline total <=10 as candidate for more stringent check
 ## low-frequency data set also need to be checked
-    grep -v GeneName ${SAMPLE_NAME}_tier1_putative_mutation.txt |awk '{if($10 <=5 || $13 <=10 || $10*100/$11<20) printf("%s\t%s\n", $4, $5)}' >>rs_num.lst
+grep -v GeneName ${SAMPLE_NAME}_tier1_putative_mutation.txt |awk '{if($10 <=5 || $13 <=10 || $10*100/$11<20) printf("%s\t%s\n", $4, $5)}' >>rs_num.lst
 
-    awk '{printf("%s.%s\n", $4, $5)}' ${SAMPLE_NAME}_tier1_putative_mutation.txt |cut -f1 |sort -u >k.lst
-    ${FIND_SUB} -i ${LOW_BAM_SNP_FILE} -c k.lst -t 1 -d '\t' -o k.lst.out -n 0
-    ${FIND_SUB} -i ${HIGH_BAM_FILE} -c k.lst -t 1 -d '\t' -o k2.lst.out -n 0
-    cat k.lst.out k2.lst.out |cut -f2,3,9,18 |sort -u |awk '{printf("%s|%s|%s|%ld\n", $1, $2, $3, 1-$4)}' |sed /^chr/s/// >${SAMPLE_NAME}_SNV_check.lst
-    echo "xxx|xxx xxx" >check.lst
-    cat ${SAMPLE_NAME}_SNV_check.lst >>check.lst
-    awk '{FS="|"; printf("chr%s\t%s\t", $1, $2); print $0}' check.lst |grep -v xxx >kkk
-    fgrep -f rs_num.lst kkk |cut -f3 |sed /$/s//\|0/ >${SAMPLE_NAME}_check.mod
-    fgrep -f rs_num.lst -v kkk |cut -f3 |sed /$/s//\|1/ >>${SAMPLE_NAME}_check.mod
-    mv ${SAMPLE_NAME}_check.mod ${SAMPLE_NAME}_tier1_check.lst
-    rm ${SAMPLE_NAME}_SNV_check.lst
+awk '{printf("%s.%s\n", $4, $5)}' ${SAMPLE_NAME}_tier1_putative_mutation.txt |cut -f1 |sort -u >k.lst
 
+${FIND_SUB} -i ${LOW_BAM_SNP_FILE} -c k.lst -t 1 -d '\t' -o k.lst.out -n 0
+${FIND_SUB} -i ${HIGH_BAM_FILE} -c k.lst -t 1 -d '\t' -o k2.lst.out -n 0
+
+cat k.lst.out k2.lst.out |cut -f2,3,9,18 |sort -u |awk '{printf("%s|%s|%s|%ld\n", $1, $2, $3, 1-$4)}' |sed /^chr/s/// >${SAMPLE_NAME}_SNV_check.lst
+echo "xxx|xxx xxx" >check.lst
+cat ${SAMPLE_NAME}_SNV_check.lst >>check.lst
+    
+awk '{FS="|"; printf("chr%s\t%s\t", $1, $2); print $0}' check.lst |grep -v xxx >kkk
+fgrep -f rs_num.lst kkk |cut -f3 |sed /$/s//\|0/ >${SAMPLE_NAME}_check.mod
+fgrep -f rs_num.lst -v kkk |cut -f3 |sed /$/s//\|1/ >>${SAMPLE_NAME}_check.mod
+mv ${SAMPLE_NAME}_check.mod ${SAMPLE_NAME}_tier1_check.lst
+
+rm ${SAMPLE_NAME}_SNV_check.lst
 ##  cat k.lst.out k2.lst.out |cut -f2,3,9,18,23 |sort -u |awk '{if($5 >=5) printf("%s|%s|%s|%ld|0\n", $1, $2, $3, 1-$4); else printf("%s|%s|%s|%ld|1\n", $1, $2, $3, 1-$4)}' |sed /^chr/s/// >${SAMPLE_NAME}_SNV_check.lst
-
-  fi
+fi
 done
 
 

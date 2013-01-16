@@ -14,14 +14,20 @@ SUM_RESULTS=${SCRIPT_DIR}/summarize_results
 
 if test ! -s ${RUN_STEPS}
 then
-  echo "Fail to find file ${RUN_STEPS}"
+  if [ $DEBUG_LEVEL -gt 0 ]
+    then
+    echo "Fail to find file ${RUN_STEPS}"
+  fi
   exit 1
 fi
 
 cd ${PROCESS_DIR}
 if test ! -s ${INPUT_FILE}
 then
+if [ $DEBUG_LEVEL -gt 0 ]
+  then
   echo "Fail to find input file validate_somatic_loci.txt"
+  fi
   exit 1
 fi
 
@@ -33,7 +39,10 @@ for i in `cat ${RUN_STEPS}.current`; do
   then
     if test ! -x ${PREP_GeneName2GeneID}
     then
+    if [ $DEBUG_LEVEL -gt 0 ]
+      then
       echo "Fail to find the executable ${PREP_GeneName2GeneID}"
+      fi
       exit 1
     fi
 
@@ -43,7 +52,10 @@ for i in `cat ${RUN_STEPS}.current`; do
     OUTPUT_FILE=geneName2geneID.map
     if test ! -s ${OUTPUT_FILE}
     then
-      echo "Fail to execute ${PREP_GeneName2GeneID} ${INPUT_FILE}.mod `pwd`"
+    if [ $DEBUG_LEVEL -gt 0 ]
+      then
+        echo "Fail to execute ${PREP_GeneName2GeneID} ${INPUT_FILE}.mod `pwd`"
+      fi
       exit 1
     fi
 
@@ -52,7 +64,10 @@ for i in `cat ${RUN_STEPS}.current`; do
     cat x y |sort |uniq -u >u    
     if test -s u
     then
+    if [ $DEBUG_LEVEL -gt 0 ]
+      then
       echo "Fail to geneID for the following genes. Check failed_gene.lst"
+      fi
       cat u
       mv u failed_gene.lst
       exit 1
@@ -72,15 +87,21 @@ for i in `cat ${RUN_STEPS}.current`; do
     ${MAKE_GENE_FASTA} `pwd` `pwd`/gene2chr.lst `pwd`/all_gene.err
     if test -s all_gene.err
     then
+    if [ $DEBUG_LEVEL -gt 0 ]
+  then
       echo "error in ${MAKE_GENE_FASTA} `pwd` `pwd`/all_gene.lst `pwd`/all_gene.err"
+      fi
       exit 1
     fi
 
     for i in `cat all_gene.lst`; do
 	if test ! -s ${i}/${i}.seq
       then
+      if [ $DEBUG_LEVEL -gt 0 ]
+        then
          echo "Fail in gene ${i} for ${MAKE_GENE_FASTA}"
       fi
+    fi
     done
   fi
  
@@ -91,8 +112,11 @@ for i in `cat ${RUN_STEPS}.current`; do
     ${GENERATE_TCGA_SEQ} `pwd`/all_gene.lst ${INPUT_FILE_MOD} `pwd`/err.out `pwd`
     if test -s err.out
     then
-      echo "error: {GENERATE_TCGA_SEQ} `pwd`/all_gene.lst ${INPUT_FILE_MOD} `pwd`/err.out `pwd`"
+      if [ $DEBUG_LEVEL -gt 0 ]
+  then
+  echo "error: {GENERATE_TCGA_SEQ} `pwd`/all_gene.lst ${INPUT_FILE_MOD} `pwd`/err.out `pwd`"
     fi
+  fi
   fi
 
 
@@ -101,7 +125,10 @@ SUM_RESULTS=${SCRIPT_DIR}/summarize_results
  if test $i = map_all_somatic_mutation
  then
    PROJECT_NAME=`head -n1 sample.lst |awk '{printf("%s", substr($1, 1, length($1)-3))}'`
+   if [ $DEBUG_LEVEL -gt 0 ]
+  then
    echo "${MAP_SOMATIC_MUTATION} `pwd`/all_gene.lst `pwd` ${INPUT_FILE_MOD} `pwd`/sample.lst ${PROJECT_NAME}"
+   fi
    ${MAP_SOMATIC_MUTATION} `pwd`/all_gene.lst `pwd` ${INPUT_FILE_MOD} `pwd`/sample.lst ${PROJECT_NAME}
  fi
 
@@ -112,7 +139,10 @@ SUM_RESULTS=${SCRIPT_DIR}/summarize_results
    DATE_STAMP=`date |awk '{printf("%s%s_%s", $2, $3, $6)}'`
    if test ! -s ${SUB_SUM_FILE}
    then
+     if [ $DEBUG_LEVEL -gt 0 ]
+  then
      echo "Fail to find sub_sum.txt file ${SUB_SUM_FILE}"
+     fi
      exit 1
    fi
    cut -f2-100 ${SUB_SUM_FILE} >${SUB_SUM_FILE}.mod
@@ -129,7 +159,10 @@ SUM_RESULTS=${SCRIPT_DIR}/summarize_results
        then
          rm ${OUTPUT_FILE_NAME}
        fi
+       if [ $DEBUG_LEVEL -gt 0 ]
+  then
        echo "GeneName	SJQuality	Sample	Chr	WU_HG18_Pos	Class	AAChange	ProteinGI	mRNA_acc	#Mutant_In_Tumor	#Total_In_Tumor	#Mutant_In_Normal	#Total_In_Normal	ReferenceAllele	MutantAllele	Flanking" >${OUTPUT_FILE_NAME}
+       fi
        cat z >>${OUTPUT_FILE_NAME}
      fi
    fi

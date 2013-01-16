@@ -16,14 +16,19 @@ FisherTest=${PERLSRC_DIR}/fisherexact
 
 PValue_cutoff=0.1
 ## PValue_cutoff=0.05
+if [ $DEBUG_LEVEL -gt 0 ]
+then
 echo "INFO: P-Value Cutoff is ${PValue_cutoff}" >> $LOG_PATH/log.txt
+fi
 
 ## need to do the export for running FisherTest
 export PERL5LIB=${NEXTGEN_BIN_ROOT_DIR}/MikePerl/FishPerl/Text-NSP-1.11
 
 if test ! -s ${INPUT_SNP_FIND_FILE}
 then
+if [ $DEBUG_LEVEL -gt 0 ]
   echo "WARNING: Fail to find SNPFind output file ${INPUT_SNP_FIND_FILE}">>$LOG_PATH/log.txt
+  fi 
   exit 1
 fi
 
@@ -36,7 +41,10 @@ fi
 ## Name($3)    count_ref_tumor_fwd ($21)  count_ref_tumor_rev ($22)   count_var_tumor_fwd ($25)  count_var_tumor_rev ($26)
 ## Fisher's analysis requires the following
 ## Name    alternative_tumor_count ($18), reference_tumor_count ($16), alternative_normal_count ($17), and reference_normal_count ($15)
-echo "DEBUG About to attempt Fisher Test" >>
+if [ $DEBUG_LEVEL -gt 0 ]
+then
+echo "DEBUG About to attempt Fisher Test"
+fi
 grep SNP ${INPUT_SNP_FIND_FILE} \ #find every "SNP" in the inputted SNP file
 | awk '$29 == 0 { print }' \ #If there is both an alternative fwd and reverse count, it has alternative bi-directional confirmation. This means that the fisher test can be run 
 | cut -f 3,21,22,25,26 |awk '{if($2+$4 >0 && $3+$5>0) printf("%s\t%s\t%s\t%s\t%s\n", $1, $4, $2, $5, $3)}' \ #if there are no cases in one way or the other, we cannot run the fisher test. 

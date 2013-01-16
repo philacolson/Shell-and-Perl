@@ -16,26 +16,38 @@ MAP_SCRIPT=${SCRIPT_DIR}/map_GSC_SNP
 
 if test ! -s ${INPUT_GENE_LIST}
 then
+if [ $DEBUG_LEVEL -gt 0 ]
+then
   echo "Fail to find input gene list ${INPUT_GENE_LIST}"
-  exit 1
+  fi
+exit 1
 fi
 
 if test ! -d ${PROJECT_DIR}
 then
-  echo "Fail to find directory ${PROJECT_DIR}"
-  exit 1
+  if [ $DEBUG_LEVEL -gt 0 ]
+then
+echo "Fail to find directory ${PROJECT_DIR}"
+  fi
+exit 1
 fi
 
 if test ! -s ${VALIDATE_MUTATION_FILE}
 then
-  echo "Fail to find validated mutation file ${VALIDATE_MUTATION_FILE}"
-  exit 1
+  if [ $DEBUG_LEVEL -gt 0 ]
+then
+echo "Fail to find validated mutation file ${VALIDATE_MUTATION_FILE}"
+  fi
+exit 1
 fi
 
 if test ! -s ${SAMPLE_FILE}
 then
-  echo "Fail to find sample file ${SAMPLE_FILE}"
-  exit 1
+  if [ $DEBUG_LEVEL -gt 0 ]
+then
+echo "Fail to find sample file ${SAMPLE_FILE}"
+  fi
+exit 1
 fi
 
 for i in `cat ${INPUT_GENE_LIST}`; do

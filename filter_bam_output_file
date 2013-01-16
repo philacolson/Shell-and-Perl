@@ -16,14 +16,20 @@ FIND_SUB=/user/songliu/u2/group/Qiang/Exome/scripts/snp_postprocess/snv_postproc
 
 if test ! -s ${lowBAMSnpFile}
 then
+if [ $DEBUG_LEVEL -gt 0 ]
+then
   echo "Fail to find find from the low threshold ${lowBAMSnpFile}"
+  fi
   exit 1
 fi
 
 if test ! -s ${HighBAMFile}
 then
-  echo "Fail to find find input file for analysis ${HighBAMFile}"
-  exit 1
+if [ $DEBUG_LEVEL -gt 0 ]
+then
+echo "Fail to find find input file for analysis ${HighBAMFile}"
+fi
+exit 1
 fi
 
 

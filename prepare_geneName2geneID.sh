@@ -20,25 +20,37 @@ COPY_CONFIG_SCRIPT=${NEXTGEN_BIN_ROOT_DIR}/copy_config_script
 
 if test ! -d ${PROCESS_DIR}
 then
+if [ $DEBUG_MENU -gt 0 ]
+  then
   echo "Fail to find direcotry ${PROCESS_DIR}"
+  fi
   exit 1
 fi
 
 if test ! -s ${INPUT_FILE}
 then
+if [ $DEBUG_MENU -gt 0 ]
+  then
   echo "Fail to find validate_somatic_loci.txt file ${INPUT_FILE}"
+  fi
   exit 1
 fi
 
 if test ! -s ${GENE_INFO_FILE}
 then
+if [ $DEBUG_MENU -gt 0 ]
+  then
   echo "Fail to find gene info file ${GENE_INFO_FILE}"
+  fi
   exit 1
 fi
 
 if test ! -s ${RESCUE_GENEMAP_FILE}
 then
+if [ $DEBUG_MENU -gt 0 ]
+  then
   echo "Fail to find rescue file ${RESCUE_GENEMAP_FILE}"
+  fi
   exit 1
 fi
 
@@ -52,7 +64,10 @@ fi
 cut -f1 ${INPUT_FILE}  |sort -u >all_gene.lst
 if test ! -s all_gene.lst
 then
+  if [ $DEBUG_MENU -gt 0 ]
+  then
   echo "Fail to find file all_gene.lst"
+  fi
   exit 1
 fi
 
@@ -79,7 +94,10 @@ then
   if test -s u
   then
     mv u failed_gene.lst
-    echo "Check failed_gene.lst and look up the gene ID by going to Entrez Gene"
+    if [ $DEBUG_MENU -gt 0 ]
+  then
+  echo "Check failed_gene.lst and look up the gene ID by going to Entrez Gene"
+   fi
     exit 1
   fi
 fi
@@ -87,4 +105,7 @@ fi
 ## manually find out the gene's new name and store that in failed_gene2new_gene.map
 cut -f8 ${INPUT_FILE}  |sort -u >sample.lst
 
-echo "geneName2geneID.map and sample.lst files are created"
+if [ $DEBUG_MENU -gt 0 ]
+  then
+  echo "geneName2geneID.map and sample.lst files are created"
+fi

@@ -21,8 +21,11 @@ PERLSRC_DIR=${NEXTGEN_BIN_ROOT_DIR}/perlsrc
 FIND_SUB=${PERLSRC_DIR}/FindSub.pl
 FIND_OVERLAP=${PERLSRC_DIR}/find_overlap_interval.pl
 
-
+if [ $DEBUG_LEVEL -gt 0 ]
+then
 echo "region=${CHR_REGION}"
+fi
+
 if test -s ${OUTPUT_FILE}
 then
   rm ${OUTPUT_FILE}
@@ -39,8 +42,11 @@ cd ${INPUT_SUB_DIR}  ## directories where all the *_somatic_snp.txt reside
 ls *_${ORIGINAL_SNP_FILE_EXT} >somatic_snp_file.lst
 if test ! -s somatic_snp_file.lst
 then
+if [ $DEBUG_LEVEL -gt 0 ]
+then
   echo "Fail to find files _${ORIGINAL_SNP_FILE_EXT} in subdirectory ${INPUT_SUB_DIR}"
-  exit 1
+  fi
+exit 1
 fi
 
 ## this step is not necessary as it may eliminate the possibility of having to avoid getting the consistent format## this is a legacy of previous effort to identify putative variations
@@ -57,8 +63,11 @@ for i in `cat ${SAMPLE_LIST}`; do
   SNP_FILE=${INPUT_SUB_DIR}/${i}_${SNP_FILE_EXT}
   if test ! -s ${SNP_FILE}
   then
+if [ $DEBUG_LEVEL -gt 0 ]
+then
     echo "Fail to find input file ${SNP_FILE}"
-  else
+  fi
+else
     cut -f2 ${SNP_FILE} |sort -u >t_chr.lst
     for j in `cat t_chr.lst`; do
       echo ${j} >t.lst

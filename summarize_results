@@ -38,14 +38,21 @@ ${SUMMARY_PROGRAM} ${DATE_FLAG} `pwd` ${INPUT_GENE_LIST_FILE}
 
 if test ! -s ${SNP_INFO_SUM}
 then
+  if [ $DEBUG_LEVEL -gt 0 ]
+    then
   echo "Fail to creat the snp summary file ${SNP_INFO_SUM} after ${SUMMARY_PROGRAM} ${DATE_FLAG} `pwd` ${INPUT_GENE_LIST_FILE}"
+  fi
   exit 1
 fi
 
 if test ! -s ${GENOTYPE_INFO_SUM}
 then
+  if [ $DEBUG_LEVEL -gt 0 ]
+    then
   echo "Fail to create the genotype summary file ${GENOTYPE_INFO_SUM} after ${SUMMARY_PROGRAM} ${DATE_FLAG} `pwd` ${INPUT_GENE_LIST_FILE}"
+  fi
   exit 1
+
 fi
 
 
@@ -61,7 +68,7 @@ if test -s ${OUTPUT_FILE}
 then
   rm ${OUTPUT_FILE}
 fi
-echo "Gene	Sample	Repeat	Chr	Pos	Class	AAChange	ProteinGI	mRNA_acc	#Unique	#Indel	#Total	#IndelN	#TotalN	Flanking" >${OUTPUT_FILE}
+echo "Gene  Sample	Repeat	Chr	Pos	Class	AAChange	ProteinGI	mRNA_acc	#Unique	#Indel	#Total	#IndelN	#TotalN	Flanking" >${OUTPUT_FILE}
 
 join -1 1 -2 1 a3 a4 |awk '{printf("%s\t%s\t%s\t%s\t%s\t", $6, $7, $8, $9, $10); printf("%s\t%s\t%s\t%s\t", $2, $3, $4, $5); for(i=11; i<NF; ++i) printf("%s\t", $i); printf("%s\n", $NF)}' |sort -u>>${OUTPUT_FILE}
 

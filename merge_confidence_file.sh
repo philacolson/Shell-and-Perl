@@ -30,43 +30,64 @@ DB_SNP_SNV_LIST=/user/songliu/u2/group/Qiang/Exome/scripts/snp_postprocess/snv_p
 
 if test ! -d ${INPUT_DIR4_LOW_QUALITY_CALL}
 then
+if [ $DEBUG_LEVEL -gt 0 ]
+  then
   echo "Fail to find directory ${INPUT_DIR4_LOW_QUALITY_CALL}"
+  fi
   exit 1
 fi
 
 if test ! -d ${INPUT_DIR4_HIGH_QUALITY_CALL}
 then
+  if [ $DEBUG_LEVEL -gt 0 ]
+  then
   echo "Fail to find directory ${INPUT_DIR4_HIGH_QUALITY_CALL}"
+  fi
   exit 1
 fi
 
 if test ! -s ${INPUT_DIR4_LOW_QUALITY_CALL}/${HIGH_CONFIDENCE_FILE}
 then
+if [ $DEBUG_LEVEL -gt 0 ]
+  then
   echo "Fail to find high-confidence call for low-quality data ${INPUT_DIR4_LOW_QUALITY_CALL}/${HIGH_CONFIDENCE_FILE}"
+  fi
   exit 1
 fi
 
 if test ! -s ${INPUT_DIR4_LOW_QUALITY_CALL}/${LOW_CONFIDENCIDE_FILE}
 then
+  if [ $DEBUG_LEVEL -gt 0 ]
+  then
   echo "Fail to find low-confidence call for low-quality data ${INPUT_DIR4_LOW_QUALITY_CALL}/${LOW_CONFIDENCIDE_FILE}"
+  fi
   exit 1
 fi
 
 if test ! -s ${INPUT_DIR4_HIGH_QUALITY_CALL}/${HIGH_CONFIDENCE_FILE}
 then
+  if [ $DEBUG_LEVEL -gt 0 ]
+  then
   echo "Fail to find high-confidence call for high-quality data ${INPUT_DIR4_HIGH_QUALITY_CALL}/${HIGH_CONFIDENCE_FILE}"
+  fi
   exit 1
 fi
 
 if test ! -s ${INPUT_DIR4_HIGH_QUALITY_CALL}/${LOW_CONFIDENCIDE_FILE}
 then
+  if [ $DEBUG_LEVEL -gt 0 ]
+  then
   echo "Fail to find low-confidence call for high-quality data ${INPUT_DIR4_HIGH_QUALITY_CALL}/${LOW_CONFIDENCIDE_FILE}"
+  fi
   exit 1
 fi
 
 if test ! -s ${INPUT_BAM_FILE_4_INDEL_CHECK}
 then
+  if [ $DEBUG_LEVEL -gt 0 ]
+  then
   echo "Fail to find the input indel file ${INPUT_BAM_FILE_4_INDEL_CHECK}"
+  fi
   exit 1
 fi
 
@@ -75,7 +96,10 @@ if test -s ${INDEL_LIST}
 then
   rm ${INDEL_LIST}
 fi
-echo "create indel list"
+if [ $DEBUG_LEVEL -gt 0 ]
+  then
+  echo "create indel list in merge_confidence_file"
+fi
 grep -v SNP ${INPUT_BAM_FILE_4_INDEL_CHECK}  |awk '{for(i=0-$5; i<=$5; ++i) printf("%s.%ld\n", $2, $3+i)}' |sort -u >${INDEL_LIST}
 
 
@@ -95,21 +119,30 @@ echo ${HIGH_CONFIDENCE_FILE}.repeat >>input_file.lst
 for j in `cat input_file.lst`; do
   echo ${j}
   i=${INPUT_DIR4_LOW_QUALITY_CALL}/${j}
+  if [ $DEBUG_LEVEL -gt 0 ]
+  then
   echo $i
   echo "filter existing records"
   echo "${FIND_SUB} -i ${i} -c hq_snp.lst -t 0 -d '\t' -n 0 -o ${i}.new"
+  fi
   ${FIND_SUB} -i ${i} -c hq_snp.lst -t 0 -d '\t' -n 0 -o ${i}.new
   if test -s ${i}.new
   then
 ## clean-up dbSNP
-    echo "filter dbSNP"
+    if [ $DEBUG_LEVEL -gt 0 ]
+  then
+  echo "filter dbSNP"
+  fi
     ${FIND_SUB} -i ${i}.new -c ${DB_SNP_SNV_LIST} -t 0 -d '\t' -n 0 -o ${i}.new.2
     rm ${i}.new
     mv ${i}.new.2 ${i}.new
 ## clean-up indels
     if test -s ${i}.new
     then
-      echo "filter indel"
+      if [ $DEBUG_LEVEL -gt 0 ]
+  then
+  echo "filter indel"
+  fi
       ${FIND_SUB} -i ${i}.new -c ${INDEL_LIST} -t 0 -d '\t' -n 0 -o ${i}.new.2
       rm ${i}.new
       mv ${i}.new.2 ${i}.new
@@ -122,9 +155,12 @@ for j in `cat input_file.lst`; do
       then
         new_count=`wc ${i}.new.2 |awk '{printf("%s", $1)}'`
         original_count=`wc ${INPUT_DIR4_HIGH_QUALITY_CALL}/${j} |awk '{printf("%s", $1)}'`
+        if [ $DEBUG_LEVEL -gt 0 ]
+  then
         echo "original_count=${original_count} new_count=${new_count}"
         echo "cat ${INPUT_DIR4_HIGH_QUALITY_CALL}/${j} ${i}.new.2"
         echo "OUTPUT file=${OUTPUT_DIR}/${j}"
+        fi
         cat ${INPUT_DIR4_HIGH_QUALITY_CALL}/${j} ${i}.new.2 >${OUTPUT_DIR}/${j}
       fi
 ##      rm ${i}.new.2

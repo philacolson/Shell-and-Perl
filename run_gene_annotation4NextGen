@@ -16,7 +16,7 @@ if test ! -s ${RUN_STEPS}
 then
   if [ $DEBUG_LEVEL -gt 0 ]
     then
-    echo "Fail to find file ${RUN_STEPS}"
+    echo "Fail to find file ${RUN_STEPS}" >> $LOG
   fi
   exit 1
 fi
@@ -26,7 +26,7 @@ if test ! -s ${INPUT_FILE}
 then
 if [ $DEBUG_LEVEL -gt 0 ]
   then
-  echo "Fail to find input file validate_somatic_loci.txt"
+  echo "Fail to find input file validate_somatic_loci.txt" >> $LOG
   fi
   exit 1
 fi
@@ -41,7 +41,7 @@ for i in `cat ${RUN_STEPS}.current`; do
     then
     if [ $DEBUG_LEVEL -gt 0 ]
       then
-      echo "Fail to find the executable ${PREP_GeneName2GeneID}"
+      echo "Fail to find the executable ${PREP_GeneName2GeneID}" >> $LOG
       fi
       exit 1
     fi
@@ -54,7 +54,7 @@ for i in `cat ${RUN_STEPS}.current`; do
     then
     if [ $DEBUG_LEVEL -gt 0 ]
       then
-        echo "Fail to execute ${PREP_GeneName2GeneID} ${INPUT_FILE}.mod `pwd`"
+        echo "Fail to execute ${PREP_GeneName2GeneID} ${INPUT_FILE}.mod `pwd`" >> $LOG
       fi
       exit 1
     fi
@@ -66,7 +66,7 @@ for i in `cat ${RUN_STEPS}.current`; do
     then
     if [ $DEBUG_LEVEL -gt 0 ]
       then
-      echo "Fail to geneID for the following genes. Check failed_gene.lst"
+      echo "Fail to geneID for the following genes. Check failed_gene.lst" >> $LOG
       fi
       cat u
       mv u failed_gene.lst
@@ -89,7 +89,7 @@ for i in `cat ${RUN_STEPS}.current`; do
     then
     if [ $DEBUG_LEVEL -gt 0 ]
   then
-      echo "error in ${MAKE_GENE_FASTA} `pwd` `pwd`/all_gene.lst `pwd`/all_gene.err"
+      echo "error in ${MAKE_GENE_FASTA} `pwd` `pwd`/all_gene.lst `pwd`/all_gene.err" >> $LOG
       fi
       exit 1
     fi
@@ -99,7 +99,7 @@ for i in `cat ${RUN_STEPS}.current`; do
       then
       if [ $DEBUG_LEVEL -gt 0 ]
         then
-         echo "Fail in gene ${i} for ${MAKE_GENE_FASTA}"
+         echo "Fail in gene ${i} for ${MAKE_GENE_FASTA}" >> $LOG
       fi
     fi
     done
@@ -108,13 +108,16 @@ for i in `cat ${RUN_STEPS}.current`; do
 ## create temporary files for preparing annotation
   if test $i = generate_TCGA_sequence
   then
-    echo "${GENERATE_TCGA_SEQ} `pwd`/all_gene.lst ${INPUT_FILE_MOD} `pwd`/err.out `pwd`"
+if [ $DEBUG_LEVEL -gt 0 ]
+then
+    echo "${GENERATE_TCGA_SEQ} `pwd`/all_gene.lst ${INPUT_FILE_MOD} `pwd`/err.out `pwd`" >> $LOG
+    fi
     ${GENERATE_TCGA_SEQ} `pwd`/all_gene.lst ${INPUT_FILE_MOD} `pwd`/err.out `pwd`
     if test -s err.out
     then
       if [ $DEBUG_LEVEL -gt 0 ]
   then
-  echo "error: {GENERATE_TCGA_SEQ} `pwd`/all_gene.lst ${INPUT_FILE_MOD} `pwd`/err.out `pwd`"
+  echo "error: {GENERATE_TCGA_SEQ} `pwd`/all_gene.lst ${INPUT_FILE_MOD} `pwd`/err.out `pwd`" >> $LOG
     fi
   fi
   fi
@@ -127,7 +130,7 @@ SUM_RESULTS=${SCRIPT_DIR}/summarize_results
    PROJECT_NAME=`head -n1 sample.lst |awk '{printf("%s", substr($1, 1, length($1)-3))}'`
    if [ $DEBUG_LEVEL -gt 0 ]
   then
-   echo "${MAP_SOMATIC_MUTATION} `pwd`/all_gene.lst `pwd` ${INPUT_FILE_MOD} `pwd`/sample.lst ${PROJECT_NAME}"
+   echo "${MAP_SOMATIC_MUTATION} `pwd`/all_gene.lst `pwd` ${INPUT_FILE_MOD} `pwd`/sample.lst ${PROJECT_NAME}" >> $LOG
    fi
    ${MAP_SOMATIC_MUTATION} `pwd`/all_gene.lst `pwd` ${INPUT_FILE_MOD} `pwd`/sample.lst ${PROJECT_NAME}
  fi
@@ -141,7 +144,7 @@ SUM_RESULTS=${SCRIPT_DIR}/summarize_results
    then
      if [ $DEBUG_LEVEL -gt 0 ]
   then
-     echo "Fail to find sub_sum.txt file ${SUB_SUM_FILE}"
+     echo "Fail to find sub_sum.txt file ${SUB_SUM_FILE}" >> $LOG
      fi
      exit 1
    fi
@@ -159,10 +162,9 @@ SUM_RESULTS=${SCRIPT_DIR}/summarize_results
        then
          rm ${OUTPUT_FILE_NAME}
        fi
-       if [ $DEBUG_LEVEL -gt 0 ]
-  then
+      
        echo "GeneName	SJQuality	Sample	Chr	WU_HG18_Pos	Class	AAChange	ProteinGI	mRNA_acc	#Mutant_In_Tumor	#Total_In_Tumor	#Mutant_In_Normal	#Total_In_Normal	ReferenceAllele	MutantAllele	Flanking" >${OUTPUT_FILE_NAME}
-       fi
+      
        cat z >>${OUTPUT_FILE_NAME}
      fi
    fi

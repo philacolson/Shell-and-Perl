@@ -6,7 +6,8 @@
 
 INPUT_FILE=$1  ##validate_somatic_loci.txt
 PROCESS_DIR=$2  ## ROOT directory for running the annotation
-
+DEBUG_LEVEL=$3
+LOG=$4
 NEXTGEN_BIN_ROOT_DIR=/user/songliu/u2/group/Qiang/Exome/scripts/snp_postprocess/snv_postprocess
 PERL_SRC=${NEXTGEN_BIN_ROOT_DIR}/perlsrc
 FIND_SUB=${PERL_SRC}/FindSub.pl

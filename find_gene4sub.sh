@@ -23,7 +23,7 @@ FIND_OVERLAP=${PERLSRC_DIR}/find_overlap_interval.pl
 
 if [ $DEBUG_LEVEL -gt 0 ]
 then
-echo "region=${CHR_REGION}"
+echo "region=${CHR_REGION}" >> $LOG
 fi
 
 if test -s ${OUTPUT_FILE}
@@ -44,7 +44,7 @@ if test ! -s somatic_snp_file.lst
 then
 if [ $DEBUG_LEVEL -gt 0 ]
 then
-  echo "Fail to find files _${ORIGINAL_SNP_FILE_EXT} in subdirectory ${INPUT_SUB_DIR}"
+  echo "Fail to find files _${ORIGINAL_SNP_FILE_EXT} in subdirectory ${INPUT_SUB_DIR}" >> $LOG
   fi
 exit 1
 fi
@@ -65,7 +65,7 @@ for i in `cat ${SAMPLE_LIST}`; do
   then
 if [ $DEBUG_LEVEL -gt 0 ]
 then
-    echo "Fail to find input file ${SNP_FILE}"
+    echo "Fail to find input file ${SNP_FILE} in find_gene4sub" >> $LOG
   fi
 else
     cut -f2 ${SNP_FILE} |sort -u >t_chr.lst

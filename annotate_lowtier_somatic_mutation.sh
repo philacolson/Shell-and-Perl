@@ -5,6 +5,8 @@
 SAMPLE_NAME=$1
 PROCESS_DIR=$2
 BAD_SNP_FILE=$3  ## use no_bad_snp_file for default
+DEBUG_LEVEL=$4
+$LOG=$5
 
 PUTATIVE_SOMATIC_MUTATION_FILE=${PROCESS_DIR}/${SAMPLE_NAME}_putative_somatic_mutation.txt  ## file that includes all the mutations mapped to the genes
 

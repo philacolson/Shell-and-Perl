@@ -18,6 +18,8 @@ INPUT_DIR4_HIGH_QUALITY_CALL=$2
 SAMPLE_NAME=$3  ## e.g. SJTALL007
 INPUT_BAM_FILE_4_INDEL_CHECK=$4  ## e.g SJTALL007_bam_high_20.out
 OUTPUT_DIR=$5
+DEBUG_LEVEL=$6
+LOG=$7
 
 HIGH_CONFIDENCE_TAG=high_confidence_somatic_snp
 LOW_CONFIDENCE_TAG=low_confidence_somatic_snp

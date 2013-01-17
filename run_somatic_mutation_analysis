@@ -202,7 +202,7 @@ then
     echo "DEBUG: begin: ${SCRIPT_DIR}/filter_bam_output_file ${LOW_BAM_SNP_FILE} ${HIGH_BAM_FILE} ${SAMPLE_NAME}_bam_input.txt">>$LOG
   fi
 
-${SCRIPT_DIR}/filter_bam_output_file ${LOW_BAM_SNP_FILE} ${HIGH_BAM_FILE} ${SAMPLE_NAME}_bam_input.txt $LOG $DEBUG_LEVEL
+${SCRIPT_DIR}/filter_bam_output_file ${LOW_BAM_SNP_FILE} ${HIGH_BAM_FILE} ${SAMPLE_NAME}_bam_input.txt $DEBUG_LEVEL $LOG
 
   if [ $DEBUG_LEVEL -gt 2 ]
   then
@@ -259,7 +259,7 @@ then
 
   cp ${SAMPLE_NAME}_low_single_strand_SNV.lst ${SAMPLE_NAME}_single_strand_SNV.lst
 
-  ${SCRIPT_DIR}/collect_sub_somatic_snp ${LOW_BAM_SNP_FILE}.tmp ${SAMPLE_NAME} ${FALSE_SNP_FILE} 90 ${BAM_GERMLINE_SNP_FILE} ${SAMPLE_NAME}_log_file.txt ${SAMPLE_NAME}_single_strand_SNV.lst
+  ${SCRIPT_DIR}/collect_sub_somatic_snp ${LOW_BAM_SNP_FILE}.tmp ${SAMPLE_NAME} ${FALSE_SNP_FILE} 90 ${BAM_GERMLINE_SNP_FILE} ${SAMPLE_NAME}_log_file.txt ${SAMPLE_NAME}_single_strand_SNV.lst $DEBUG_LEVEL $LOG
 
   if [ $DEBUG_LEVEL -gt 2 ]
   then
@@ -283,14 +283,12 @@ then
 #copy over the high_single_strand (which has all the strands, since high is a subset of low) and just call it *_single_strand_snv
   cp ${SAMPLE_NAME}_high_single_strand_SNV.lst ${SAMPLE_NAME}_single_strand_SNV.lst
 
-  ${SCRIPT_DIR}/collect_sub_somatic_snp ${SAMPLE_NAME}_bam_input.txt ${SAMPLE_NAME} ${FALSE_SNP_FILE} 90  ${BAM_GERMLINE_SNP_FILE} ${SAMPLE_NAME}_single_strand_SNV.lst $LOG $DEBUG_LEVEL
+  ${SCRIPT_DIR}/collect_sub_somatic_snp ${SAMPLE_NAME}_bam_input.txt ${SAMPLE_NAME} ${FALSE_SNP_FILE} 90  ${BAM_GERMLINE_SNP_FILE} ${SAMPLE_NAME}_single_strand_SNV.lst $DEBUG_LEVEL $LOG
   if [ $DEBUG_LEVEL -gt 2 ]
   then
-    if [ $DEBUG_LEVEL -gt 2 ]
-    then
       echo "finish ${SCRIPT_DIR}/collect_sub_somatic_snp ${SAMPLE_NAME}_bam_input.txt ${SAMPLE_NAME} ${FALSE_SNP_FILE} 90  ${BAM_GERMLINE_SNP_FILE} ${SAMPLE}_logfile.txt ${SAMPLE_NAME}_single_strand_SNV.lst">>$LOG
     fi
-  fi
+  
 fi
 
 
@@ -299,11 +297,11 @@ if test $k = merge_low_N_high
 then
   if [ $DEBUG_LEVEL -gt 0 ]
   then
-    echo "DEBUG: start ${SCRIPT_DIR}/merge_confidence_file `pwd` `pwd`/temp3 ${SAMPLE_NAME} ${HIGH_BAM_FILE} `pwd`/temp4"
+    echo "DEBUG: start ${SCRIPT_DIR}/merge_confidence_file `pwd` `pwd`/temp3 ${SAMPLE_NAME} ${HIGH_BAM_FILE} `pwd`/temp4" $DEBUG_LEVEL $LOG
   fi
 
   cp temp3/${SAMPLE_NAME}_*confidence* .
-  ${SCRIPT_DIR}/merge_confidence_file `pwd`/temp3 `pwd` ${SAMPLE_NAME} ${HIGH_BAM_FILE} `pwd`/temp4 $LOG $DEBUG_LEVEL
+  ${SCRIPT_DIR}/merge_confidence_file `pwd`/temp3 `pwd` ${SAMPLE_NAME} ${HIGH_BAM_FILE} `pwd`/temp4 $DEBUG_LEVEL $LOG
   
   if [ $DEBUG_LEVEL -gt 2 ]
   then
@@ -326,7 +324,7 @@ then
     echo "start ${SCRIPT_DIR}/annotate_putative_somatic_mutation ${SAMPLE_NAME} `pwd` ${FALSE_SNP_FILE}">>$LOG
   fi
 
-  ${SCRIPT_DIR}/annotate_putative_somatic_mutation ${SAMPLE_NAME} `pwd` ${FALSE_SNP_FILE}
+  ${SCRIPT_DIR}/annotate_putative_somatic_mutation ${SAMPLE_NAME} `pwd` ${FALSE_SNP_FILE} $DEBUG_LEVEL $LOG
   
   if [ $DEBUG_LEVEL -gt 2 ]
   then
@@ -386,7 +384,7 @@ then
     
   cp sample.lst temp/SOMATIC_RESULTS/.
   
-  ${SCRIPT_DIR}/run_gene_annotation4NextGen `pwd`/${SAMPLE_NAME}_validate_somatic_loci.txt `pwd`/${SAMPLE_NAME}_sub_sum.txt `pwd`/temp/SOMATIC_RESULTS `pwd`/run_all_annotation_steps `pwd`/${SAMPLE_NAME}_putative_somatic_mutation.txt
+  ${SCRIPT_DIR}/run_gene_annotation4NextGen `pwd`/${SAMPLE_NAME}_validate_somatic_loci.txt `pwd`/${SAMPLE_NAME}_sub_sum.txt `pwd`/temp/SOMATIC_RESULTS `pwd`/run_all_annotation_steps `pwd`/${SAMPLE_NAME}_putative_somatic_mutation.txt $DEBUG_LEVEL $LOG
   
   if [ $DEBUG_LEVEL -gt 2 ]
   then
@@ -405,7 +403,7 @@ then
   fi
 
 
-  ${SCRIPT_DIR}/filter_duplicate_somatic_mutation_file ${SAMPLE_NAME}_putative_somatic_mutation.txt ${SAMPLE_NAME}_putative_somatic_mutation.txt.mod
+  ${SCRIPT_DIR}/filter_duplicate_somatic_mutation_file ${SAMPLE_NAME}_putative_somatic_mutation.txt ${SAMPLE_NAME}_putative_somatic_mutation.txt.mod $DEBUG_LEVEL $LOG
     
   if test ! -s ${SAMPLE_NAME}_putative_somatic_mutation.txt.mod
   then
@@ -435,7 +433,7 @@ then
     echo "start ${SCRIPT_DIR}/annotate_lowtier_somatic_mutation ${SAMPLE_NAME} `pwd` `pwd`/${FALSE_SNP_FILE}">>$LOG
   fi
 
-  ${SCRIPT_DIR}/annotate_lowtier_somatic_mutation ${SAMPLE_NAME} `pwd` `pwd`/${FALSE_SNP_FILE} $LOG $DEBUG_LEVEL
+  ${SCRIPT_DIR}/annotate_lowtier_somatic_mutation ${SAMPLE_NAME} `pwd` `pwd`/${FALSE_SNP_FILE} $DEBUG_LEVEL $LOG
     
   if [ $DEBUG_LEVEL -gt 2 ]
   then
@@ -512,7 +510,7 @@ for i in `cat t.lst`; do
 ## clean-up the duplicate records
   if test -s ${SAMPLE_NAME}_tier${i}_putative_mutation.txt
   then
-    ${SCRIPT_DIR}/filter_duplicate_somatic_mutation_file ${SAMPLE_NAME}_tier${i}_putative_mutation.txt ${SAMPLE_NAME}_tier${i}_putative_mutation.txt.mod
+    ${SCRIPT_DIR}/filter_duplicate_somatic_mutation_file ${SAMPLE_NAME}_tier${i}_putative_mutation.txt ${SAMPLE_NAME}_tier${i}_putative_mutation.txt.mod $DEBUG_LEVEL $LOG
     
     if test ! -s ${SAMPLE_NAME}_tier${i}_putative_mutation.txt.mod
     then

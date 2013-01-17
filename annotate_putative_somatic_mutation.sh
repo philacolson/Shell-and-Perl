@@ -3,6 +3,8 @@
 SAMPLE_NAME=$1
 PROCESS_DIR=$2
 BAD_SNP_FILE=$3  ## use no_bad_snp_file for default
+$DEBUG_LEVEL=$4
+LOG=$5
 
 OUTPUT_SUMMARY_FILE=${PROCESS_DIR}/${SAMPLE_NAME}_sub_sum.txt
 OUTPUT_VALIDATED_FILE=${PROCESS_DIR}/${SAMPLE_NAME}_validate_somatic_loci.txt

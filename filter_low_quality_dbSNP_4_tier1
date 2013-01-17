@@ -8,6 +8,8 @@
 SAMPLE_NAME=$1
 DISEASE_CODE=$2
 ASSEMBLY=$3  ## hg18 or hg19 human genome version, 19 is the latest
+DEBUG_LEVEL=$4
+LOG=$5
 
 ##BAM_FILE_DIR=/nfs_exports/genomes/1/PCGP/BucketRaw/${DISEASE_CODE}
 BAM_FILE_DIR=/user/songliu/u2/group/Qiang/Exome/bladder_output/BAM

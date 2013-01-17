@@ -22,7 +22,7 @@ if test ! -d ${PROCESS_DIR}
 then
 if [ $DEBUG_MENU -gt 0 ]
   then
-  echo "Fail to find direcotry ${PROCESS_DIR}"
+  echo "Fail to find direcotry ${PROCESS_DIR} in prepare_geneName2geneID" >> $LOG
   fi
   exit 1
 fi
@@ -31,7 +31,7 @@ if test ! -s ${INPUT_FILE}
 then
 if [ $DEBUG_MENU -gt 0 ]
   then
-  echo "Fail to find validate_somatic_loci.txt file ${INPUT_FILE}"
+  echo "Fail to find validate_somatic_loci.txt file ${INPUT_FILE} in prepare_geneName2geneID" >> $LOG
   fi
   exit 1
 fi
@@ -40,7 +40,7 @@ if test ! -s ${GENE_INFO_FILE}
 then
 if [ $DEBUG_MENU -gt 0 ]
   then
-  echo "Fail to find gene info file ${GENE_INFO_FILE}"
+  echo "Fail to find gene info file ${GENE_INFO_FILE} in prepare_geneName2geneID" >> $LOG
   fi
   exit 1
 fi
@@ -49,7 +49,7 @@ if test ! -s ${RESCUE_GENEMAP_FILE}
 then
 if [ $DEBUG_MENU -gt 0 ]
   then
-  echo "Fail to find rescue file ${RESCUE_GENEMAP_FILE}"
+  echo "Fail to find rescue file ${RESCUE_GENEMAP_FILE} in prepare_geneName2geneID" >> $LOG
   fi
   exit 1
 fi
@@ -66,7 +66,7 @@ if test ! -s all_gene.lst
 then
   if [ $DEBUG_MENU -gt 0 ]
   then
-  echo "Fail to find file all_gene.lst"
+  echo "Fail to find file all_gene.lst for prepare _geneName2geneID" >> $LOG
   fi
   exit 1
 fi
@@ -96,7 +96,7 @@ then
     mv u failed_gene.lst
     if [ $DEBUG_MENU -gt 0 ]
   then
-  echo "Check failed_gene.lst and look up the gene ID by going to Entrez Gene"
+  echo "Check failed_gene.lst and look up the gene ID by going to Entrez Gene" >> $LOG
    fi
     exit 1
   fi
@@ -107,5 +107,5 @@ cut -f8 ${INPUT_FILE}  |sort -u >sample.lst
 
 if [ $DEBUG_MENU -gt 0 ]
   then
-  echo "geneName2geneID.map and sample.lst files are created"
+  echo "geneName2geneID.map and sample.lst files are created" >> $LOG
 fi

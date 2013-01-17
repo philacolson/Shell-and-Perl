@@ -4,6 +4,8 @@ SUB_SUM_FILE=$2
 PROCESS_DIR=$3
 RUN_STEPS=$4
 OUTPUT_FILE_NAME=$5   ##e.g. SJMB004_putative_somatic_mutation.txt
+DEBUG_LEVEL=$6
+LOG=$7
 
 SCRIPT_DIR=/user/songliu/u2/group/Qiang/Exome/scripts/snp_postprocess/snv_postprocess
 PREP_GeneName2GeneID=${SCRIPT_DIR}/prepare_geneName2geneID

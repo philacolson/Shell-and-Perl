@@ -38,8 +38,8 @@ if [ $DEBUG_LEVEL -gt 2 ]
 then 
 echo "DEBUG: created EXCEL directories." >> $LOG
 fi
-
-for i in `cat ${INPUT_SAMPLE}`; do
+#again, below is for if we want to make a list instead of a single input
+#for i in `cat ${INPUT_SAMPLE}`; do
   ##echo $i
   cp ../${INPUT_SAMPLE}_G_bam.out .
   cp ../${INPUT_SAMPLE}_bam_low.out ${INPUT_SAMPLE}_bam_low.out
@@ -51,7 +51,7 @@ if [ $DEBUG_LEVEL -gt 2 ]
   #D_BAM=`ls ${BAM_DIR}/${INPUT_SAMPLE}_D*.bam`
   #G_BAM=`ls ${BAM_DIR}/${INPUT_SAMPLE}_G*.bam`
   ${SCRIPT_DIR}/run_somatic_mutation_analysis ${i} no_false_snp ${D_BAM_FILE} ${G_BAM_FILE} ${DEBUG_LEVEL} ${LOG}
-done
+#done
 if [ $DEBUG_LEVEL -gt 2 ]
 	then
 echo "DEBUG:  ${SCRIPT_DIR}/run_check_snv_script ${INPUT_SAMPLE} ${DISEASE_CODE}" >> $LOG

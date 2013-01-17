@@ -7,6 +7,8 @@ FILTER_RS_THRESHOLD=$4  ## how much percent of rs# is allowed to be there? 95 or
 GERMLINE_SNP_FILE=$5
 LOG_FILE=$6
 SINGLE_STRAND_FILE=$7   ## information about the single-strand orientation
+DEBUG_LEVEL=$8
+LOG=$9
 
 NEXTGEN_BIN_ROOT_DIR=/user/songliu/u2/group/Jianmin/snp_postprocess/snv_postprocess
 PERLSRC_DIR=/user/songliu/u2/group/Jianmin/snp_postprocess/snv_postprocess

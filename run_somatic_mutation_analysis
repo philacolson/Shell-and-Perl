@@ -6,7 +6,7 @@ SAMPLE_NAME=$1
 FALSE_SNP_FILE=$2 #or value will be 'no_false_snp'
 #hq
 D_BAM=$6 #cancer genome
-G_BAM=$67 #noncancer genome
+G_BAM=$7 #noncancer genome
 DEBUG_LEVEL = $8
 LOG = $9
 

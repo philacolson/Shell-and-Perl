@@ -48,10 +48,10 @@ then
   mkdir temp4
 fi
 
-LOW_BAM_SNP_FILE=${SAMPLE_NAME}_bam_low.out
+LOW_BAM_SNP_FILE=$3
 ## LOW_BAM_SNP_FILE=SJMB004_bam_new_low.out
 
-if test ! -s $3
+if test ! -s ${LOW_BAM_SNP_FILE}
 then
   if [ $DEBUG_LEVEL -gt 0 ]
   then  

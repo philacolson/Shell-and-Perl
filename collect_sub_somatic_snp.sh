@@ -1,4 +1,5 @@
 #!/bin/sh
+
 INPUT_FILE_ORIGINAL=$1
 PATIENT_ID=$2   #it will produce patientID_low_confidence_somatic_snp.txt and patientID_high_confidence_snp.txt
 OUTPUT_RS_FALSE_FILE=$3  ## false positive rs counts
@@ -32,12 +33,15 @@ fi
 
 if test ! -s ${INPUT_FILE_ORIGINAL}
 then
-  echo "Fail to find file ${INPUT_FILE_ORIGINAL}"
-  exit 1
+if [ $DEBUG_LEVEL -gt 0 ]
+then
+  echo "Fail to find file ${INPUT_FILE_ORIGINAL}" >> $LOG
+  fi
+exit 1
 fi
 
 
-
+#probably not the same log file.  Don't delete before checking.
 if test -s ${LOG_FILE}
 then
   rm ${LOG_FILE}
@@ -94,8 +98,11 @@ fi
 
 if test ! -s ${SOMATIC_CRITER_LIST}
 then
-  echo "fail to find criteria file ${SOMATIC_CRITER_LIST}"
-  exit 1
+if [ $DEBUG_LEVEL -gt 0 ]
+then
+  echo "fail to find criteria file ${SOMATIC_CRITER_LIST}" >> $LOG
+  fi
+exit 1
 fi
 
 #1) First print out the input file
@@ -116,8 +123,11 @@ then
     ${FIND_SUB} -i ${INPUT_FILE}.tmp.original -c ${GERMLINE_SNP_FILE}.lst -t 0 -d '\t' -n 0 -o  ${INPUT_FILE}.tmp.original.clean
     original_count=`wc ${INPUT_FILE}.tmp.original |awk '{printf("%s", $1)}'`
     filtered_count=`wc ${INPUT_FILE}.tmp.original.clean  |awk '{printf("%s", $1)}'`
-    echo "original_count=$original_count	filtered_count=$filtered_count"
-    echo "original_count=$original_count	germline_filtered_count=$filtered_count" >>${LOG_FILE}
+    if [ $DEBUG_LEVEL -gt 0 ]
+then
+echo "original_count=$original_count	filtered_count=$filtered_count" >> $LOG
+    fi
+echo "original_count=$original_count	germline_filtered_count=$filtered_count" >>${LOG_FILE}
 #FILTERING AND RENAMING OCCURS HERE
     mv  ${INPUT_FILE}.tmp.original.clean  ${INPUT_FILE}.tmp.original
   fi
@@ -129,8 +139,11 @@ fi
 
 if test ! -s ${INPUT_FILE}.tmp.original
 then
-  echo "Fail to generate ${INPUT_FILE}.tmp.original"
-  exit 1
+  if [ $DEBUG_LEVEL -gt 0 ]
+then
+echo "Fail to generate ${INPUT_FILE}.tmp.original" >> $LOG
+  fi
+exit 1
 fi
 ##OPTIMIZE: Couldn't we strain the things before the FIND_SUB?  Carrying the extra snps that we aren't even using seems uselessly memory intensive.
 ## needs to eliminate cases where there are 0 reads in tumor normal normal
@@ -221,20 +234,29 @@ fi
 
 #Whittles down the original input file for only the snps that we are concerned with.
 for SIGNIFICANT_SNP_LIST in `cat snp_test.lst`; do
-  echo ${SIGNIFICANT_SNP_LIST}
-  ${FIND_SUB} -i ${INPUT_FILE}.tmp.original -c ${SIGNIFICANT_SNP_LIST} -t 1 -d '\t' -n 0 -o ${INPUT_FILE}.tmp
+  if [ $DEBUG_LEVEL -gt 0 ]
+then
+echo ${SIGNIFICANT_SNP_LIST} >> $LOG
+  fi
+${FIND_SUB} -i ${INPUT_FILE}.tmp.original -c ${SIGNIFICANT_SNP_LIST} -t 1 -d '\t' -n 0 -o ${INPUT_FILE}.tmp
 
 ## check for tp53 mutations
   if test ${SIGNIFICANT_SNP_LIST} = fisher_snp_high.lst
   then
     awk '{if(index($2, "chr17") == 1) print $0}' ${INPUT_FILE} |awk '{if($3 >=7513394 && $3 <=7520826 && $14+$12!= 0 && $13+$15 != 0) print $0}' |awk '{printf("%s\t%ld\t%ld\t%s\t%s\n", $1, $14*100/($14+$12), $15*100/($13+$15), $12, $15)}'  |awk '{printf("%s\t%ld\t%ld\t%ld\t%ld\t%ld\n", $1, $3-$2, $2, $3, $4, $5)}' |awk '{if($2 > 20 && $3 <=3 && $6 >=3 && $5>=3) print $0}' |cut -f1 >TP53_snp.lst
     fgrep -f TP53_snp.lst ${INPUT_FILE} >>${OUTPUT_FILE}
-    echo "TP53"
-    cat ${OUTPUT_FILE}
+    if [ $DEBUG_LEVEL -gt 0 ]
+then
+echo "TP53" >> $LOG
+fi
+cat ${OUTPUT_FILE}
   fi
 ##for the classification levels we care about, do
   for THRESHOLD in `cat ${SOMATIC_CRITER_LIST}`; do
-    echo ${THRESHOLD}
+    if [ $DEBUG_LEVEL -gt 0 ]
+then
+echo ${THRESHOLD} >> $LOG
+fi
 ## col2=% of mutant allele in TUMOR - % of mutant allele in NORMAL
 	## col3=% of mutant allele in NORMAL
 	## col4=% of mutant allele in TUMOR
@@ -435,8 +457,12 @@ for SIGNIFICANT_SNP_LIST in `cat snp_test.lst`; do
           rs_count=`grep rs x.out |wc |awk '{printf("%s", $1)}'`
           total_count=`wc x |awk '{printf("%s", $1)}'`
           freq=`echo "$rs_count $total_count" |awk '{printf("%ld", $1*100/$2)}'`
-          echo "SNP_list=${SIGNIFICANT_SNP_LIST} Threshold=$THRESHOLD: rs_count=$rs_count,  total_count=$total_count, freq=$freq" 
-          echo " " >>${LOG_FILE}
+          if [ $DEBUG_LEVEL -gt 0 ]
+then
+echo "SNP_list=${SIGNIFICANT_SNP_LIST} Threshold=$THRESHOLD: rs_count=$rs_count,  total_count=$total_count, freq=$freq" >> $LOG
+fi
+#possibly redundant, honestly I don't remember.  But my gut is telling me keep it
+echo " " >>${LOG_FILE}
           echo "SNP_list=${SIGNIFICANT_SNP_LIST} Threshold=$THRESHOLD: rs_count=$rs_count,  total_count=$total_count, freq=$freq" >>${LOG_FILE}
 
           if test -s ${REPEAT_LIST}
@@ -446,16 +472,26 @@ for SIGNIFICANT_SNP_LIST in `cat snp_test.lst`; do
             if test ${no_repeat_total_count} -gt 0
             then
               freq=`echo "$no_repeat_rs_count $no_repeat_total_count" |awk '{printf("%ld", $1*100/$2)}'`
-              echo "No repeat: SNP_list=${SIGNIFICANT_SNP_LIST} Threshold=$THRESHOLD: no_repeat_rs_count=$no_repeat_rs_count, no_repeat_total_count=$no_repeat_total_count, freq=$freq" 
-              echo "No repeat: SNP_list=${SIGNIFICANT_SNP_LIST} Threshold=$THRESHOLD: no_repeat_rs_count=$no_repeat_rs_count, no_repeat_total_count=$no_repeat_total_count, freq=$freq" >>${LOG_FILE}
+              if [ $DEBUG_LEVEL -gt 0 ]
+then
+echo "No repeat: SNP_list=${SIGNIFICANT_SNP_LIST} Threshold=$THRESHOLD: no_repeat_rs_count=$no_repeat_rs_count, no_repeat_total_count=$no_repeat_total_count, freq=$freq" >> $LOG
+fi
+#again, probably not the same as $LOG
+echo "No repeat: SNP_list=${SIGNIFICANT_SNP_LIST} Threshold=$THRESHOLD: no_repeat_rs_count=$no_repeat_rs_count, no_repeat_total_count=$no_repeat_total_count, freq=$freq" >>${LOG_FILE}
             else
-              echo "No repeat: SNP_list=${SIGNIFICANT_SNP_LIST} Threshold=${THRESHOLD}: 0 found"
-              echo "No repeat: SNP_list=${SIGNIFICANT_SNP_LIST} Threshold=${THRESHOLD}: 0 found" >>${LOG_FILE}
+             if [ $DEBUG_LEVEL -gt 0 ]
+then
+echo "No repeat: SNP_list=${SIGNIFICANT_SNP_LIST} Threshold=${THRESHOLD}: 0 found" >> $LOG
+fi
+echo "No repeat: SNP_list=${SIGNIFICANT_SNP_LIST} Threshold=${THRESHOLD}: 0 found" >>${LOG_FILE}
             fi
           fi
         else
-          echo "SNP_list=${SIGNIFICANT_SNP_LIST} Threshold=${THRESHOLD}: 0 found"
-          echo " " >>${LOG_FILE}
+          if [ $DEBUG_LEVEL -gt 0 ]
+then
+echo "SNP_list=${SIGNIFICANT_SNP_LIST} Threshold=${THRESHOLD}: 0 found" >> $LOG
+fi
+echo " " >>${LOG_FILE}
           echo "SNP_list=${SIGNIFICANT_SNP_LIST} Threshold=${THRESHOLD}: 0 found" >>${LOG_FILE}
         fi
 
@@ -473,8 +509,11 @@ for SIGNIFICANT_SNP_LIST in `cat snp_test.lst`; do
         then
           rm x.out
           NormalCvg=`head -n1 rs_cvg.out|cut -f1`
-          echo "Normal coverage = $NormalCvg"
-          echo "awk '{if(\$5 >=$NormalCvg) printf(\"%s\\n\", \$1)}' temp.out" >awk.x
+          if [ $DEBUG_LEVEL -gt 0 ]
+then
+echo "Normal coverage = $NormalCvg" >> $LOG
+fi
+echo "awk '{if(\$5 >=$NormalCvg) printf(\"%s\\n\", \$1)}' temp.out" >awk.x
           chmod uog+x awk.x
           ./awk.x >x
           if test -s x
@@ -500,8 +539,11 @@ for SIGNIFICANT_SNP_LIST in `cat snp_test.lst`; do
         fi
         rs_count=`grep rs x.out |wc |awk '{printf("%s", $1)}'`
         total_count=`wc x |awk '{printf("%s", $1)}'`
-        echo "Revised: $THRESHOLD:frequency above 50% rs_count=$rs_count  total_count=$total_count"
-      fi
+        if [ $DEBUG_LEVEL -gt 0 ]
+	then
+	echo "Revised: $THRESHOLD:frequency above 50% rs_count=$rs_count  total_count=$total_count" >> $LOG
+	fi
+fi
   
       if test ${confidence} = high_confidence  ##keep high-confidence with rs number
       then
@@ -556,8 +598,11 @@ fi
 if test -s ${REPEAT_LIST}.high
 then
 ## consider those in repeat but has very high-fisher value as something good
-  echo "find repeat ${REPEAT_LIST}"
-  sort -u ${REPEAT_LIST}.high >${REPEAT_LIST}.sort
+  if [ $DEBUG_LEVEL -gt 0 ]
+then
+echo "find repeat ${REPEAT_LIST}" >> $LOG
+fi
+sort -u ${REPEAT_LIST}.high >${REPEAT_LIST}.sort
   mv ${REPEAT_LIST}.sort ${REPEAT_LIST}.high
   cat ${REPEAT_LIST}.high fisher_snp_very_high.lst |sort |uniq -d >>d
 fi

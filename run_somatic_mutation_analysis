@@ -561,5 +561,3 @@ rm ${SAMPLE_NAME}_SNV_check.lst
 ##  cat k.lst.out k2.lst.out |cut -f2,3,9,18,23 |sort -u |awk '{if($5 >=5) printf("%s|%s|%s|%ld|0\n", $1, $2, $3, 1-$4); else printf("%s|%s|%s|%ld|1\n", $1, $2, $3, 1-$4)}' |sed /^chr/s/// >${SAMPLE_NAME}_SNV_check.lst
 fi
 done
-
-

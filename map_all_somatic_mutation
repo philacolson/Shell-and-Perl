@@ -18,7 +18,7 @@ if test ! -s ${INPUT_GENE_LIST}
 then
 if [ $DEBUG_LEVEL -gt 0 ]
 then
-  echo "Fail to find input gene list ${INPUT_GENE_LIST}"
+  echo "Fail to find input gene list ${INPUT_GENE_LIST} for map_all_somatic_mutation" >> $LOG
   fi
 exit 1
 fi
@@ -27,7 +27,7 @@ if test ! -d ${PROJECT_DIR}
 then
   if [ $DEBUG_LEVEL -gt 0 ]
 then
-echo "Fail to find directory ${PROJECT_DIR}"
+echo "Fail to find directory ${PROJECT_DIR} in map_all_somatic_mutation" >> $LOG
   fi
 exit 1
 fi
@@ -36,7 +36,7 @@ if test ! -s ${VALIDATE_MUTATION_FILE}
 then
   if [ $DEBUG_LEVEL -gt 0 ]
 then
-echo "Fail to find validated mutation file ${VALIDATE_MUTATION_FILE}"
+echo "Fail to find validated mutation file ${VALIDATE_MUTATION_FILE} for map_all_somatic_mutation" >> $LOG
   fi
 exit 1
 fi
@@ -45,7 +45,7 @@ if test ! -s ${SAMPLE_FILE}
 then
   if [ $DEBUG_LEVEL -gt 0 ]
 then
-echo "Fail to find sample file ${SAMPLE_FILE}"
+echo "Fail to find sample file ${SAMPLE_FILE} for map_all_somatic_mutation" >> $LOG
   fi
 exit 1
 fi

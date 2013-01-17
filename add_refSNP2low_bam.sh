@@ -4,7 +4,8 @@
 
 ##This program is a waste of time, apparently.  We should just annotate ALL THE SNPS in one go.
 SAMPLE_NAME=$1
-
+DEBUG_LEVEL=$2
+LOG=$3
 
 ##SCRIPT_DIR=/nfs_exports/apps/internal/scripts
 ##FIND_SUB=/nfs_exports/apps/gnu-apps/NextGen/perlsrc/FindSub.pl

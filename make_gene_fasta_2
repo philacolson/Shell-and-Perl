@@ -3,6 +3,8 @@
 ROOT_DIR=$1
 INPUT_GENE2CHR_LIST=$2  ## use Gene|Chr
 ERR_REPORT_FILE=$3
+DEBUG_LEVEL=$4
+LOG=$5
 
 ## the NCBI human_gene2refseq are located
 ##NEXTGEN_BIN_ROOT_DIR=/nfs_exports/apps/internal/scripts

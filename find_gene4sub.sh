@@ -14,6 +14,8 @@ CHR_REGION=$5	 ##this region records chromosomal region for exons of interest. I
 ORIGINAL_SNP_FILE_EXT=$6  ## extension of somatic snp file prior to filtering. e.g. ${sample}_somatic_snp.txt. U
 ## ORIGINAL_SNP_FILE_EXT=somatic_snp.txt
 SNP_FILE_EXT=${ORIGINAL_SNP_FILE_EXT}.clean  ## things appended to the end of each SNPs
+DEBUG_LEVEL=$7
+LOG=$8
 
 NEXTGEN_BIN_ROOT_DIR=/user/songliu/u2/group/Qiang/Exome/scripts/snp_postprocess/snv_postprocess
 PERLSRC_DIR=${NEXTGEN_BIN_ROOT_DIR}/perlsrc

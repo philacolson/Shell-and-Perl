@@ -35,37 +35,55 @@ LOW_CONFIDENCE_SOMATIC_SNP_FILE_REPEAT=${LOW_CONFIDENCE_SOMATIC_SNP_FILE}.repeat
 
 if test ! -x ${FIND_GENE_PROGRAM}
 then
-  echo "Fail to find program ${FIND_GENE_PROGRAM}"
-  exit 1
+  if [ $DEBUG_LEVEL -gt 0 ]
+  then
+    echo "Fail to find program ${FIND_GENE_PROGRAM}" >> $LOG
+  fi
+exit 1
 fi
 
 if test ! -d ${TFBS_REGION}
 then
-  echo "Fail to find transcription binding sites direcotry ${TFBS_REGION}"
-  exit 1
+  if [ $DEBUG_LEVEL -gt 0 ]
+then
+echo "Fail to find transcription binding sites direcotry ${TFBS_REGION} in Annotate_lowtier" >> $LOG
+fi
+exit 1
 fi
 
 if test ! -d ${CPG_REGION}
 then
-  echo "Fail to find CpG island direcotry ${CPG_REGION}"
+  if [ $DEBUG_LEVEL -gt 0 ]
+then
+echo "Fail to find CpG island direcotry ${CPG_REGION} in Annotate_lowtier" >> $LOG
+fi
   exit 1
 fi
 
 if test ! -d ${CONSERVED_REGION}
 then
-  echo "Fail to find conserved direcotry ${CONSERVED_REGION}"
+if [ $DEBUG_LEVEL -gt 0 ]
+then
+  echo "Fail to find conserved direcotry ${CONSERVED_REGION} in Annotate_lowtier" >> $LOG
+fi
   exit 1
 fi
 
 if test ! -d ${REPEAT_REGION}
 then
-  echo "Fail to find repeat direcotry ${REPEAT_REGION}"
-  exit 1
+if [ $DEBUG_LEVEL -gt 0 ]
+then
+  echo "Fail to find repeat direcotry ${REPEAT_REGION} in Annotate_lowtier" >> $LOG
+  fi
+exit 1
 fi
 
 if test ! -d ${PROCESS_DIR}
 then
-  echo "Fail to find diretory ${PROCESS_DIR}"
+if [ $DEBUG_LEVEL -gt 0 ]
+then
+  echo "Fail to find diretory ${PROCESS_DIR} in Annotate_lowtier" >> $LOG
+fi
   exit 1
 fi
 
@@ -128,8 +146,10 @@ for k in `cat dir.lst`; do
   cd ${PROCESS_DIR}
   tier=`echo $k|cut -f1 -d"|"`
   ck_dir=`echo $k|cut -f2 -d"|"`
-  echo "tier=$tier; and ck_dir=$ck_dir"
-
+  if [ $DEBUG_LEVEL -gt 0 ]
+then
+echo "tier=$tier; and ck_dir=$ck_dir" >> $LOG
+fi
   if test $tier = 2
   then
     OUTPUT_SUMMARY_FILE=${TIER2_SUMMARY_FILE}

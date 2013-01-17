@@ -9,6 +9,9 @@ VALIDATE_MUTATION_FILE=$3
 SAMPLE_FILE=$4
 PROJECT_LABEL=$5  ## TCGA_OV
 
+DEBUG_LEVEL=$6
+LOG=$7
+
 
 SCRIPT_DIR=/user/songliu/u2/group/Qiang/Exome/scripts/snp_postprocess/snv_postprocess
 MAP_SCRIPT=${SCRIPT_DIR}/map_GSC_SNP

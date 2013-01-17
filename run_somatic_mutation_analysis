@@ -5,10 +5,10 @@
 SAMPLE_NAME=$1
 FALSE_SNP_FILE=$2 #or value will be 'no_false_snp'
 #hq
-D_BAM=$3 #cancer genome
-G_BAM=$4 #noncancer genome
-DEBUG_LEVEL = $5
-LOG = $6
+D_BAM=$6 #cancer genome
+G_BAM=$67 #noncancer genome
+DEBUG_LEVEL = $8
+LOG = $9
 
 RUN_STEPS=run_all_somatic_SNV_steps
 
@@ -51,7 +51,7 @@ fi
 LOW_BAM_SNP_FILE=${SAMPLE_NAME}_bam_low.out
 ## LOW_BAM_SNP_FILE=SJMB004_bam_new_low.out
 
-if test ! -s ${LOW_BAM_SNP_FILE}
+if test ! -s $3
 then
   if [ $DEBUG_LEVEL -gt 0 ]
   then  
@@ -60,7 +60,7 @@ then
   fi
 fi
 
-BAM_GERMLINE_SNP_FILE=${SAMPLE_NAME}_G_bam.out
+BAM_GERMLINE_SNP_FILE=$4
 ## BAM_GERMLINE_SNP_FILE=SJMB004_G_bam.out
 
 if test ! -s ${BAM_GERMLINE_SNP_FILE}
@@ -72,18 +72,9 @@ then
   exit 1
 fi
 
-HIGH_BAM_OLD_FILE=${SAMPLE_NAME}_bam_high_20_old.out
 
-if test ! -s ${HIGH_BAM_OLD_FILE}
-then
-  if [ $DEBUG_LEVEL -gt 0 ]
-  then
-    echo "WARNING: Fail to find the bam file with high quality old results: ${HIGH_BAM_OLD_FILE}" >> $LOG
-  fi
-##  exit 1
-fi
 
-HIGH_BAM_FILE=${SAMPLE_NAME}_bam_high_20.out
+HIGH_BAM_FILE=$5
 
 if test ! -s ${HIGH_BAM_FILE}
 then

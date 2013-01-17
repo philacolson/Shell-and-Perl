@@ -2,6 +2,7 @@
 INPUT_SNP_FIND_FILE=$1
 OUTPUT_FILE=$2
 LOG_PATH=$3
+LOG=$4
 ## this program runs Fisher's Exact test to evaluate whether there are any significant allelic imbalance in forward and reverse read for the presence of mutant allele
 ## this was used to generate the single-strand SNV site as it is more accurate than a simple orientation check
 

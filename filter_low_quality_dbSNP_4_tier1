@@ -31,7 +31,7 @@ if test ! -s ${D_BAM}
 then
 if [ $DEBUG_LEVEL -gt 0 ]
 then
-  echo "Fail to find diagnosis sample ${D_BAM}"
+  echo "Fail to find diagnosis sample ${D_BAM} in filter_low" >> $LOG
  fi
 exit 1
 fi
@@ -40,7 +40,7 @@ if test ! -s ${G_BAM}
 then
   if [ $DEBUG_LEVEL -gt 0 ]
 then
-echo "Fail to find germline sample ${G_BAM}"
+echo "Fail to find germline sample ${G_BAM} in filter_low" >> $LOG
   fi
 exit 1
 fi
@@ -59,7 +59,7 @@ else
   else
     if [ $DEBUG_LEVEL -gt 0 ]
 then
-echo "Incorrect assembly ${ASSEMBLY}"
+echo "Incorrect assembly ${ASSEMBLY}" >> $LOG
     fi
 exit 1
   fi
@@ -69,7 +69,7 @@ if test ! -s ${SAMPLE_NAME}_tier1_putative_mutation.txt
 then
   if [ $DEBUG_LEVEL -gt 0 ]
 then
-echo "Fail to find tier 1 file ${SAMPLE_NAME}_tier1_putative_mutation.txt"
+echo "Fail to find tier 1 file ${SAMPLE_NAME}_tier1_putative_mutation.txt" >> $LOG
   fi
 exit 1
 fi

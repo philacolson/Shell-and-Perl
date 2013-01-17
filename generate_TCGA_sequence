@@ -3,6 +3,8 @@ INPUT_GENE_LIST=$1
 INPUT_VALIDATE_SNP_FILE=$2   ## validate_somatic_loci.txt
 ERR_FILE=$3
 ROOT_DIR=$4
+DEBUG_LEVEL=$5
+LOG=$6
 
 ##GENOME_FASTA_DIR=${NEXTGEN_BIN_ROOT_DIR}/nextgensupport/hg18
 GENOME_FASTA_DIR=/user/songliu/u2/group/Qiang/Exome/scripts/snp_postprocess/snv_postprocess/fasta

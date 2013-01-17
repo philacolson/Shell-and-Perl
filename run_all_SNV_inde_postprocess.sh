@@ -20,7 +20,7 @@ EXCEL_ROOT_DIR=$8
 
 LOG=${BAM_DIR}/${INPUT_SAMPLE}_LOG.txt
 echo $DEBUG_LEVEL >> $LOG
-`cat $LOG`
+
 #reimplement below if we want a list of them to be entered
 HIGH_SNP_OUT=$5
 LOW_SNP_OUT=$6

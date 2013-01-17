@@ -18,7 +18,7 @@ if test ! -s ${lowBAMSnpFile}
 then
 if [ $DEBUG_LEVEL -gt 0 ]
 then
-  echo "Fail to find find from the low threshold ${lowBAMSnpFile}"
+  echo "Fail to find find from the low threshold ${lowBAMSnpFile} in filter_bam" >> $LOG
   fi
   exit 1
 fi
@@ -27,7 +27,7 @@ if test ! -s ${HighBAMFile}
 then
 if [ $DEBUG_LEVEL -gt 0 ]
 then
-echo "Fail to find find input file for analysis ${HighBAMFile}"
+echo "Fail to find find input file for analysis ${HighBAMFile} in filter_bam" >> $LOG
 fi
 exit 1
 fi

@@ -16,7 +16,7 @@ if test ! -s ${HIGH_BAM_FILE}
 then
   if [ $DEBUG_LEVEL -gt 0 ]
 then
-echo "Fail to find the bam file with high quality new results: ${HIGH_BAM_FILE}"
+echo "Fail to find the bam file with high quality new results: ${HIGH_BAM_FILE} in add_refSNP2low_bam" >> $LOG
 fi
 exit 1
 fi
@@ -26,7 +26,7 @@ if test ! -s ${LOW_BAM_SNP_FILE}
 then
   if [ $DEBUG_LEVEL -gt 0 ]
 then
-echo "Fail to find low-quality compute data ${LOW_BAM_SNP_FILE}"
+echo "Fail to find low-quality compute data ${LOW_BAM_SNP_FILE} in add_refSNP2low_bam" >> $LOG
 fi
 exit 1
 fi
@@ -35,7 +35,7 @@ if test -s rs.lst
 then
  if [ $DEBUG_LEVEL -gt 0 ]
 then
-echo "Low bam already had dbSNP"
+echo "Low bam already had dbSNP" >> $LOG
 fi
 exit 1
 fi
@@ -50,7 +50,7 @@ if test ! -s rs_high.sort #if the file is empty
 then
  if [ $DEBUG_LEVEL -gt 0 ]
 then
-echo "no rs found in ${HIGH_BAM_FILE}" #There were no real SNPs in the given HIGH_BAM_FILE - none of them were in dbSNP
+echo "If you see this, rs_high.sort is empty in add_refSNP2low_bam, meaning no rs found in ${HIGH_BAM_FILE}" >> $LOG #There were no real SNPs in the given HIGH_BAM_FILE - none of them were in dbSNP
 fi
 exit 1
 fi

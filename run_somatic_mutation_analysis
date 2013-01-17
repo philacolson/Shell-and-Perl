@@ -7,8 +7,8 @@ FALSE_SNP_FILE=$2 #or value will be 'no_false_snp'
 #hq
 D_BAM=$6 #cancer genome
 G_BAM=$7 #noncancer genome
-DEBUG_LEVEL = $8
-LOG = $9
+DEBUG_LEVEL=$8
+LOG=$9
 
 RUN_STEPS=run_all_somatic_SNV_steps
 
@@ -28,14 +28,14 @@ then
   echo "modify_SJLLQ" >>${RUN_STEPS}
 fi
 
-if [ $DEBUG_LEVEL -gt 2 ]
+if [ $DEBUG_LEVEL > 2 ]
 then
   echo "DEBUG: created run_all_somatic_SNV_steps">> $LOG
 fi
 
 ##SCRIPT_DIR=/nfs_exports/apps/internal/scripts
 ##FIND_SUB=/nfs_exports/apps/gnu-apps/NextGen/perlsrc/FindSub.pl
-SCRIPT_DIR=/user/songliu/u2/group/Qiang/Exome/scripts/snp_postprocess/snv_postprocess
+SCRIPT_DIR=~/Desktop/Shell-and-Perl-master
 FIND_SUB=$SCRIPT_DIR/FindSub.pl
 
 if test ! -d temp3
@@ -53,7 +53,7 @@ LOW_BAM_SNP_FILE=$3
 
 if test ! -s ${LOW_BAM_SNP_FILE}
 then
-  if [ $DEBUG_LEVEL -gt 0 ]
+  if [ $DEBUG_LEVEL > 0 ]
   then  
       echo "WARNING: Fail to find low-quality compute data ${LOW_BAM_SNP_FILE}" >> $LOG
       exit 1    
@@ -65,7 +65,7 @@ BAM_GERMLINE_SNP_FILE=$4
 
 if test ! -s ${BAM_GERMLINE_SNP_FILE}
 then
-  if [ $DEBUG_LEVEL -gt 0 ]
+  if [ $DEBUG_LEVEL > 0 ]
   then
     echo "WARNING: Fail to find germline SNP file ${SAMPLE_NAME}_G_bam" >> $LOG
   fi
@@ -78,7 +78,7 @@ HIGH_BAM_FILE=$5
 
 if test ! -s ${HIGH_BAM_FILE}
 then
-  if [ $DEBUG_LEVEL -gt 0 ]
+  if [ $DEBUG_LEVEL > 0 ]
   then
     echo "WARNING:  Fail to find the bam file with high quality new results: ${HIGH_BAM_FILE}">>$LOG
   fi
@@ -93,7 +93,7 @@ fi
 
 if test ! -s ${HIGH_BAM_FILE}.original
 then
-  if [ $DEBUG_LEVEL -gt 0 ]
+  if [ $DEBUG_LEVEL > 0 ]
   then
     echo "WARNING: Fail to copy the original bam file ${HIGH_BAM_FILE}.original" >> $LOG
   fi
@@ -107,7 +107,7 @@ fi
 
 if test ! -s ${LOW_BAM_SNP_FILE}.original
 then
-  if [ $DEBUG_LEVEL -gt 0 ]
+  if [ $DEBUG_LEVEL > 0 ]
   then
     echo "WARNING:  Fail to copy the original bam file ${LOW_BAM_SNP_FILE}.original" >> $LOG
   fi
@@ -120,7 +120,7 @@ then
 fi
 
 
-if [ $DEBUG_LEVEL -gt 2 ]
+if [ $DEBUG_LEVEL > 2 ]
 then
   echo "DEBUG: Beginning find_single_strand_coverage with ${HIGH_BAM_FILE}.original, ${SAMPLE_NAME_high_single_strand_SNV.lst}">>$LOG
 fi
@@ -128,7 +128,7 @@ fi
 #params are the input and the output file.
 ${SCRIPT_DIR}/find_single_strand_coverage ${HIGH_BAM_FILE}.original ${SAMPLE_NAME}_high_single_strand_SNV.lst $DEBUG_LEVEL $LOG 
 
-if [ $DEBUG_LEVEL -gt 2 ]
+if [ $DEBUG_LEVEL > 2 ]
 then
   echo "DEBUG: Beginning find_single_strand_coverage with ${LOW_BAM_SNP_FILE}.original, ${SAMPLE_NAME_low_single_strand_SNV.lst}" >>$LOG
 fi
@@ -170,7 +170,7 @@ cut -f 3-13,15-18,27-35 ${BAM_GERMLINE_SNP_FILE}.original >${BAM_GERMLINE_SNP_FI
 
 ##The dbSNP is important because it has all the known SNPs with data about them.
 ## this script modifies the low_bam.out file by adding the database realSNP# to it. This avoids dbSNP markers being called somatic in low_bam.out because the run does not include the dbSNP check
-${SCRIPT_DIR}/add_refSNP2low_bam ${SAMPLE_NAME} $DEBUG_LEVEL $LOG
+${SCRIPT_DIR}/add_refSNP2low_bam.sh ${SAMPLE_NAME} $DEBUG_LEVEL $LOG
 
 ## low-confidence calls were run without using dbSNP. It needs to be patched for dbSNP markers
 
@@ -189,14 +189,14 @@ for k in `cat ${RUN_STEPS}.current`; do
 ##I think filter_bam_output_file is just checking to be sure every High read is in low.  Jianmin thinks so too.
 if test $k = compute_low_somatic_snp
 then
-  if [ $DEBUG_LEVEL -gt 2 ]
+  if [ $DEBUG_LEVEL > 2 ]
   then
     echo "DEBUG: begin: ${SCRIPT_DIR}/filter_bam_output_file ${LOW_BAM_SNP_FILE} ${HIGH_BAM_FILE} ${SAMPLE_NAME}_bam_input.txt">>$LOG
   fi
 
 ${SCRIPT_DIR}/filter_bam_output_file ${LOW_BAM_SNP_FILE} ${HIGH_BAM_FILE} ${SAMPLE_NAME}_bam_input.txt $DEBUG_LEVEL $LOG
 
-  if [ $DEBUG_LEVEL -gt 2 ]
+  if [ $DEBUG_LEVEL > 2 ]
   then
      echo "DEBUG: finish: ${SCRIPT_DIR}/filter_bam_output_file ${LOW_BAM_SNP_FILE} ${HIGH_BAM_FILE} ${SAMPLE_NAME}_bam_input.txt">>$LOG
   fi
@@ -204,7 +204,7 @@ ${SCRIPT_DIR}/filter_bam_output_file ${LOW_BAM_SNP_FILE} ${HIGH_BAM_FILE} ${SAMP
   if test ! -s ${SAMPLE_NAME}_bam_input.txt
   then
   
-    if [ $DEBUG_LEVEL -gt 0 ]
+    if [ $DEBUG_LEVEL > 0 ]
     then
        echo "WARNING: fail to create ${SAMPLE_NAME}_bam_input.txt"
     fi
@@ -219,7 +219,7 @@ fi
 if test $k = compute_low_somatic_snp
 then
 
-  if [ $DEBUG_LEVEL -gt 2 ]
+  if [ $DEBUG_LEVEL > 2 ]
   then
     echo "DEBUG: start: ${SCRIPT_DIR}/collect_sub_somatic_snp ${LOW_BAM_SNP_FILE} ${SAMPLE_NAME} ${FALSE_SNP_FILE} 90 ${BAM_GERMLINE_SNP_FILE} ${SAMPLE_NAME}_log_file.txt ${SAMPLE_NAME}_single_strand_SNV.lst" >> $LOG
   fi
@@ -251,9 +251,9 @@ then
 
   cp ${SAMPLE_NAME}_low_single_strand_SNV.lst ${SAMPLE_NAME}_single_strand_SNV.lst
 
-  ${SCRIPT_DIR}/collect_sub_somatic_snp ${LOW_BAM_SNP_FILE}.tmp ${SAMPLE_NAME} ${FALSE_SNP_FILE} 90 ${BAM_GERMLINE_SNP_FILE} ${SAMPLE_NAME}_log_file.txt ${SAMPLE_NAME}_single_strand_SNV.lst $DEBUG_LEVEL $LOG
+  ${SCRIPT_DIR}/collect_sub_somatic_snp.sh ${LOW_BAM_SNP_FILE}.tmp ${SAMPLE_NAME} ${FALSE_SNP_FILE} 90 ${BAM_GERMLINE_SNP_FILE} ${SAMPLE_NAME}_log_file.txt ${SAMPLE_NAME}_single_strand_SNV.lst $DEBUG_LEVEL $LOG
 
-  if [ $DEBUG_LEVEL -gt 2 ]
+  if [ $DEBUG_LEVEL > 2 ]
   then
       echo "DEBUG: finish: ${SCRIPT_DIR}/collect_sub_somatic_snp ${LOW_BAM_SNP_FILE}.tmp ${SAMPLE_NAME} ${FALSE_SNP_FILE} 90 ${BAM_GERMLINE_SNP_FILE} ${SAMPLE_NAME}_log_file.txt ${SAMPLE_NAME}_single_strand_SNV.lst" >> $LOG
   fi
@@ -268,7 +268,7 @@ fi
 if test $k = compute_high_somatic_snp
 then
 ## now do the analysis using high-quality data
-  if [ $DEBUG_LEVEL -gt 2 ]
+  if [ $DEBUG_LEVEL > 2 ]
   then
     echo "DEBUG: start ${SCRIPT_DIR}/collect_sub_somatic_snp ${SAMPLE_NAME}_bam_input.txt ${SAMPLE_NAME} ${FALSE_SNP_FILE} 90  ${BAM_GERMLINE_SNP_FILE} ${SAMPLE}_logfile.txt ${SAMPLE_NAME}_single_strand_SNV.lst">>$LOG
   fi
@@ -276,7 +276,7 @@ then
   cp ${SAMPLE_NAME}_high_single_strand_SNV.lst ${SAMPLE_NAME}_single_strand_SNV.lst
 
   ${SCRIPT_DIR}/collect_sub_somatic_snp ${SAMPLE_NAME}_bam_input.txt ${SAMPLE_NAME} ${FALSE_SNP_FILE} 90  ${BAM_GERMLINE_SNP_FILE} ${SAMPLE_NAME}_single_strand_SNV.lst $DEBUG_LEVEL $LOG
-  if [ $DEBUG_LEVEL -gt 2 ]
+  if [ $DEBUG_LEVEL > 2 ]
   then
       echo "finish ${SCRIPT_DIR}/collect_sub_somatic_snp ${SAMPLE_NAME}_bam_input.txt ${SAMPLE_NAME} ${FALSE_SNP_FILE} 90  ${BAM_GERMLINE_SNP_FILE} ${SAMPLE}_logfile.txt ${SAMPLE_NAME}_single_strand_SNV.lst">>$LOG
     fi
@@ -287,7 +287,7 @@ fi
 ## merge the poor quality data with good quality data
 if test $k = merge_low_N_high
 then
-  if [ $DEBUG_LEVEL -gt 0 ]
+  if [ $DEBUG_LEVEL > 0 ]
   then
     echo "DEBUG: start ${SCRIPT_DIR}/merge_confidence_file `pwd` `pwd`/temp3 ${SAMPLE_NAME} ${HIGH_BAM_FILE} `pwd`/temp4" $DEBUG_LEVEL $LOG
   fi
@@ -295,7 +295,7 @@ then
   cp temp3/${SAMPLE_NAME}_*confidence* .
   ${SCRIPT_DIR}/merge_confidence_file `pwd`/temp3 `pwd` ${SAMPLE_NAME} ${HIGH_BAM_FILE} `pwd`/temp4 $DEBUG_LEVEL $LOG
   
-  if [ $DEBUG_LEVEL -gt 2 ]
+  if [ $DEBUG_LEVEL > 2 ]
   then
     echo "end ${SCRIPT_DIR}/merge_confidence_file `pwd` `pwd`/temp3 ${SAMPLE_NAME} ${HIGH_BAM_FILE} `pwd`/temp4">>$LOG
   fi
@@ -311,21 +311,21 @@ fi
 ## start to annotate the somatic mutations by generating *_validate_somatic_loci.txt and *_sub_sum.txt
 if test $k = annotate_putative_mutation
 then
-  if [ $DEBUG_LEVEL -gt 2 ]
+  if [ $DEBUG_LEVEL > 2 ]
   then
     echo "start ${SCRIPT_DIR}/annotate_putative_somatic_mutation ${SAMPLE_NAME} `pwd` ${FALSE_SNP_FILE}">>$LOG
   fi
 
   ${SCRIPT_DIR}/annotate_putative_somatic_mutation ${SAMPLE_NAME} `pwd` ${FALSE_SNP_FILE} $DEBUG_LEVEL $LOG
   
-  if [ $DEBUG_LEVEL -gt 2 ]
+  if [ $DEBUG_LEVEL > 2 ]
   then
     echo "end ${SCRIPT_DIR}/annotate_putative_somatic_mutation ${SAMPLE_NAME} `pwd` ${FALSE_SNP_FILE}">>$LOG
   fi
 
 if test ! -s ${SAMPLE_NAME}_validate_somatic_loci.txt
   then
-    if [ $DEBUG_LEVEL -gt 0 ]
+    if [ $DEBUG_LEVEL > 0 ]
     then
       echo "Fail to generate ${SAMPLE_NAME}_validate_somatic_loci.txt">>$LOG
     fi
@@ -337,7 +337,7 @@ fi
 
 if test ! -s ${SAMPLE_NAME}_sub_sum.txt
 then
-  if [ $DEBUG_LEVEL -gt 0 ]
+  if [ $DEBUG_LEVEL > 0 ]
   then
     echo "Fail to generate ${SAMPLE_NAME}_sub_sum.txt">>$LOG
   fi
@@ -367,7 +367,7 @@ then
     rm ${SAMPLE_NAME}_putative_somatic_mutation.txt
   fi
   
-  if [ $DEBUG_LEVEL -gt 2 ]
+  if [ $DEBUG_LEVEL > 2 ]
   then
     echo "DEBUG: start ${SCRIPT_DIR}/run_gene_annotation4NextGen `pwd`/${SAMPLE_NAME}_validate_somatic_loci.txt `pwd`/${SAMPLE_NAME}_sub_sum.txt `pwd`/temp/SOMATIC_RESULTS `pwd`/run_all_annotation_steps `pwd`/${SAMPLE_NAME}_putative_somatic_mutation.txt">>$LOG
   fi
@@ -378,7 +378,7 @@ then
   
   ${SCRIPT_DIR}/run_gene_annotation4NextGen `pwd`/${SAMPLE_NAME}_validate_somatic_loci.txt `pwd`/${SAMPLE_NAME}_sub_sum.txt `pwd`/temp/SOMATIC_RESULTS `pwd`/run_all_annotation_steps `pwd`/${SAMPLE_NAME}_putative_somatic_mutation.txt $DEBUG_LEVEL $LOG
   
-  if [ $DEBUG_LEVEL -gt 2 ]
+  if [ $DEBUG_LEVEL > 2 ]
   then
     echo "DEBUG: end ${SCRIPT_DIR}/run_gene_annotation4NextGen `pwd`/${SAMPLE_NAME}_validate_somatic_loci.txt `pwd`/${SAMPLE_NAME}_sub_sum.txt `pwd`/temp/SOMATIC_RESULTS `pwd`/run_all_annotation_steps `pwd`/${SAMPLE_NAME}_putative_somatic_mutation.txt"
   fi
@@ -386,7 +386,7 @@ then
   if test ! -s ${SAMPLE_NAME}_putative_somatic_mutation.txt
   then
       
-    if [ $DEBUG_LEVEL -gt 0 ]
+    if [ $DEBUG_LEVEL > 0 ]
     then
       echo "WARNING: Fail to generate ${SAMPLE_NAME}_putative_somatic_mutation.txt in run_gene_anntation">>$LOG
     fi
@@ -399,7 +399,7 @@ then
     
   if test ! -s ${SAMPLE_NAME}_putative_somatic_mutation.txt.mod
   then
-    if [ $DEBUG_LEVEL -gt 0 ]
+    if [ $DEBUG_LEVEL > 0 ]
     then
       echo "WARNING: Fail in filter_duplicate_somatic_mutation_file for ${SAMPLE_NAME}">>$LOG
     fi
@@ -420,14 +420,14 @@ fi
 
 if test $k = annotate_low_tier_mutation
 then
-  if [ $DEBUG_LEVEL -gt 2 ]
+  if [ $DEBUG_LEVEL > 2 ]
   then
     echo "start ${SCRIPT_DIR}/annotate_lowtier_somatic_mutation ${SAMPLE_NAME} `pwd` `pwd`/${FALSE_SNP_FILE}">>$LOG
   fi
 
   ${SCRIPT_DIR}/annotate_lowtier_somatic_mutation ${SAMPLE_NAME} `pwd` `pwd`/${FALSE_SNP_FILE} $DEBUG_LEVEL $LOG
     
-  if [ $DEBUG_LEVEL -gt 2 ]
+  if [ $DEBUG_LEVEL > 2 ]
   then
     echo "end ${SCRIPT_DIR}/annotate_lowtier_somatic_mutation ${SAMPLE_NAME} `pwd` `pwd`/${FALSE_SNP_FILE}">>$LOG
   fi
@@ -437,7 +437,7 @@ if test $k = modify_SJLLQ
 then
   if test ! -s temp3/${SAMPLE_NAME}_low_confidence_somatic_snp.txt.new.2
   then
-    if [ $DEBUG_LEVEL -gt 0 ]
+    if [ $DEBUG_LEVEL > 0 ]
     then
       echo "Fail to find the additional variants that only appeared at the low level analysis">>$LOG
     fi
@@ -448,7 +448,7 @@ fi
 
 
 ## modify the tiers 1-4 by adding the SJLLQ type
-if [ $DEBUG_LEVEL -gt 2 ]
+if [ $DEBUG_LEVEL > 2 ]
 then
   echo "start modifying the SJLLQ type">>$LOG
 fi
@@ -506,7 +506,7 @@ for i in `cat t.lst`; do
     
     if test ! -s ${SAMPLE_NAME}_tier${i}_putative_mutation.txt.mod
     then
-      if [ $DEBUG_LEVEL -gt 0 ]
+      if [ $DEBUG_LEVEL > 0 ]
       then
         echo "WARNING: Fail in filter_duplicate_somatic_mutation_file for ${SAMPLE_NAME}_tier${i}_putative_mutation.txt">>$LOG
       fi
@@ -520,7 +520,7 @@ done
     
 java -jar /user/songliu/u2/group/Qiang/Exome/scripts/snp_postprocess/snv_postprocess/TabToExcel.jar ${SAMPLE_NAME}_tier1_putative_mutation.txt
 
-if [ $DEBUG_LEVEL -gt 2 ]
+if [ $DEBUG_LEVEL > 2 ]
 then
   echo "DEBUG: finish modifying the SJLLQ type">>$LOG
 fi
@@ -549,5 +549,5 @@ mv ${SAMPLE_NAME}_check.mod ${SAMPLE_NAME}_tier1_check.lst
 
 rm ${SAMPLE_NAME}_SNV_check.lst
 ##  cat k.lst.out k2.lst.out |cut -f2,3,9,18,23 |sort -u |awk '{if($5 >=5) printf("%s|%s|%s|%ld|0\n", $1, $2, $3, 1-$4); else printf("%s|%s|%s|%ld|1\n", $1, $2, $3, 1-$4)}' |sed /^chr/s/// >${SAMPLE_NAME}_SNV_check.lst
-fi
+
 done

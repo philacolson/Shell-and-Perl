@@ -24,7 +24,7 @@ for i in `cat ${INPUT_SAMPLE_LIST}`; do
   then
 	if [ $DEBUG_LEVEL -gt 1 ]
 	then 
-  echo "INFO: no dir for ${EXCEL_ROOT_DIR}/${i}, making directory." >> LOG_DIR/log.txt
+  echo "INFO: no dir for ${EXCEL_ROOT_DIR}/${i}, making directory." >> $LOG
 	fi
     mkdir -p ${EXCEL_ROOT_DIR}/${i}
     #exit 1
@@ -33,7 +33,7 @@ done
 
 if [ $DEBUG_LEVEL -gt 2 ]
 then 
-echo "DEBUG: created EXCEL directories." >>LOG_DIR/log.txt
+echo "DEBUG: created EXCEL directories." >> $LOG
 fi
 
 for i in `cat ${INPUT_SAMPLE_LIST}`; do
@@ -42,7 +42,7 @@ for i in `cat ${INPUT_SAMPLE_LIST}`; do
   cp ../${i}_bam_low.out ${i}_bam_low.out
   cp ../${i}_bam_high_20.out ${i}_bam_high_20.out
 if [ $DEBUG_LEVEL -gt 2 ]
-	then echo "DEBUG:  ${SCRIPT_DIR}/run_somatic_mutation_analysis ${i} no_false_snp" >> LOG_DIR/log.txt
+	then echo "DEBUG:  ${SCRIPT_DIR}/run_somatic_mutation_analysis ${i} no_false_snp" >> $LOG
 	fi
   #hq
   D_BAM=`ls ${BAM_DIR}/${i}_D*.bam`
@@ -51,7 +51,7 @@ if [ $DEBUG_LEVEL -gt 2 ]
 done
 if [ $DEBUG_LEVEL -gt 2 ]
 	then
-echo "DEBUG:  ${SCRIPT_DIR}/run_check_snv_script ${INPUT_SAMPLE_LIST} ${DISEASE_CODE}" >> LOG_DIR/log.txt
+echo "DEBUG:  ${SCRIPT_DIR}/run_check_snv_script ${INPUT_SAMPLE_LIST} ${DISEASE_CODE}" >> $LOG
 fi
 
 ${SCRIPT_DIR}/run_check_snv_script ${INPUT_SAMPLE_LIST} ${DISEASE_CODE}

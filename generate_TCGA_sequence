@@ -24,7 +24,7 @@ if test ! -s ${INPUT_GENE_LIST}
 then
 if [ $DEBUG_LEVEL -gt 0 ]
 then
-  echo "Fail to find the gene list file ${INPUT_GENE_LIST}"
+  echo "Fail to find the gene list file ${INPUT_GENE_LIST} in generate_TCGA" >> $LOG
   fi
 exit 1
 fi
@@ -33,7 +33,7 @@ if test ! -s ${INPUT_VALIDATE_SNP_FILE}
 then
   if [ $DEBUG_LEVEL -gt 0 ]
 then
-echo "Fail to find the validated SNP file ${INPUT_VALIDATE_SNP_FILE}"
+echo "Fail to find the validated SNP file ${INPUT_VALIDATE_SNP_FILE} in generateTCGA" >> $LOG
   fi
 exit 1
 fi
@@ -46,7 +46,7 @@ fi
 for i in `cat ${INPUT_GENE_LIST}`; do
   if [ $DEBUG_LEVEL -gt 0 ]
 then
-echo $i
+echo $i >> $LOG
 fi
 cd ${ROOT_DIR}/$i
   if test -s good_SNP.map.tmp
@@ -76,7 +76,7 @@ cd ${ROOT_DIR}/$i
         pos=`echo $j|cut -f2 -d"|" |awk '{printf("%ld", $1+10)}'`
         if [ $DEBUG_LEVEL -gt 0 ]
 then
-echo "pos=$pos"
+echo "pos=$pos" >> $LOG
 fi
 echo $pos >c_pos.lst
         ## expected_value=`grep $pos cgene.lst.out |cut -f5 |cut -b1 |sort -u`
@@ -88,13 +88,13 @@ echo $pos >c_pos.lst
         expected_value=`cut -f5 c_pos.lst.out |cut -b1 |sort -u`
         if [ $DEBUG_LEVEL -gt 0 ]
 then
-echo "var=$var_value expected=$expected_value"
+echo "var=$var_value expected=$expected_value" >> $LOG
 fi
 if test $expected_value = "-"
         then
           if [ $DEBUG_LEVEL -gt 0 ]
 then
-echo "insertion"
+echo "insertion" >> $LOG
 fi
 sed /\^/s//$j"	"/g temp.out >>good_SNP.map.tmp
         else

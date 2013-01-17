@@ -5,7 +5,8 @@ INPUT_SUMMARY_SNP_FILE=$1   ## i.e. somatic_indel_sum.txt
 INPUT_GENE_LIST_FILE=$2  ## e.g. all_gene.lst
 DATE_FLAG=$3
 OUTPUT_FILE=$4
-
+DEBUG_LEVEL=$5
+LOG=$6
 ## generate summary SNPs for snps and genotypes
 if test ! -s ${INPUT_SUMMARY_SNP_FILE}
 then

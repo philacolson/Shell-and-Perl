@@ -17,9 +17,7 @@ FILTER_DBSNP=$SCRIPT_DIR/filter_low_quality_dbSNP_4_tier1
 
 ##EXCEL_ROOT_DIR=/nfs_exports/linux-file1/home/naevegrp/jzhang2/NextGen/PCGP
 EXCEL_ROOT_DIR=$6
-HIGH_LIST=$7
-LOW_LIST=$8
-GERM_LIST=$9
+
 LOG=${BAM_DIR}/${INPUT_SAMPLE}_LOG.txt
 echo $DEBUG_LEVEL >> $LOG
 `cat $LOG`

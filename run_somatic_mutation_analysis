@@ -178,7 +178,7 @@ cut -f 3-13,15-18,27-35 ${BAM_GERMLINE_SNP_FILE}.original >${BAM_GERMLINE_SNP_FI
 
 ##The dbSNP is important because it has all the known SNPs with data about them.
 ## this script modifies the low_bam.out file by adding the database realSNP# to it. This avoids dbSNP markers being called somatic in low_bam.out because the run does not include the dbSNP check
-${SCRIPT_DIR}/add_refSNP2low_bam ${SAMPLE_NAME} $LOG $DEBUG_LEVEL
+${SCRIPT_DIR}/add_refSNP2low_bam ${SAMPLE_NAME} $DEBUG_LEVEL $LOG
 
 ## low-confidence calls were run without using dbSNP. It needs to be patched for dbSNP markers
 

@@ -32,7 +32,7 @@ if test ! -d ${INPUT_DIR4_LOW_QUALITY_CALL}
 then
 if [ $DEBUG_LEVEL -gt 0 ]
   then
-  echo "Fail to find directory ${INPUT_DIR4_LOW_QUALITY_CALL}"
+  echo "Fail to find directory ${INPUT_DIR4_LOW_QUALITY_CALL} for merge_confidence" >> $LOG
   fi
   exit 1
 fi
@@ -41,7 +41,7 @@ if test ! -d ${INPUT_DIR4_HIGH_QUALITY_CALL}
 then
   if [ $DEBUG_LEVEL -gt 0 ]
   then
-  echo "Fail to find directory ${INPUT_DIR4_HIGH_QUALITY_CALL}"
+  echo "Fail to find directory ${INPUT_DIR4_HIGH_QUALITY_CALL} for merge_confidence" >> $LOG
   fi
   exit 1
 fi
@@ -50,7 +50,7 @@ if test ! -s ${INPUT_DIR4_LOW_QUALITY_CALL}/${HIGH_CONFIDENCE_FILE}
 then
 if [ $DEBUG_LEVEL -gt 0 ]
   then
-  echo "Fail to find high-confidence call for low-quality data ${INPUT_DIR4_LOW_QUALITY_CALL}/${HIGH_CONFIDENCE_FILE}"
+  echo "Fail to find high-confidence call for low-quality data ${INPUT_DIR4_LOW_QUALITY_CALL}/${HIGH_CONFIDENCE_FILE} for merge_confidence" >> $LOG
   fi
   exit 1
 fi
@@ -59,7 +59,7 @@ if test ! -s ${INPUT_DIR4_LOW_QUALITY_CALL}/${LOW_CONFIDENCIDE_FILE}
 then
   if [ $DEBUG_LEVEL -gt 0 ]
   then
-  echo "Fail to find low-confidence call for low-quality data ${INPUT_DIR4_LOW_QUALITY_CALL}/${LOW_CONFIDENCIDE_FILE}"
+  echo "Fail to find low-confidence call for low-quality data ${INPUT_DIR4_LOW_QUALITY_CALL}/${LOW_CONFIDENCIDE_FILE} for merge_confidence" >> $LOG
   fi
   exit 1
 fi
@@ -68,7 +68,7 @@ if test ! -s ${INPUT_DIR4_HIGH_QUALITY_CALL}/${HIGH_CONFIDENCE_FILE}
 then
   if [ $DEBUG_LEVEL -gt 0 ]
   then
-  echo "Fail to find high-confidence call for high-quality data ${INPUT_DIR4_HIGH_QUALITY_CALL}/${HIGH_CONFIDENCE_FILE}"
+  echo "Fail to find high-confidence call for high-quality data ${INPUT_DIR4_HIGH_QUALITY_CALL}/${HIGH_CONFIDENCE_FILE} for merge_confidence" >> $LOG
   fi
   exit 1
 fi
@@ -77,7 +77,7 @@ if test ! -s ${INPUT_DIR4_HIGH_QUALITY_CALL}/${LOW_CONFIDENCIDE_FILE}
 then
   if [ $DEBUG_LEVEL -gt 0 ]
   then
-  echo "Fail to find low-confidence call for high-quality data ${INPUT_DIR4_HIGH_QUALITY_CALL}/${LOW_CONFIDENCIDE_FILE}"
+  echo "Fail to find low-confidence call for high-quality data ${INPUT_DIR4_HIGH_QUALITY_CALL}/${LOW_CONFIDENCIDE_FILE} for merge_confidence" >> $LOG
   fi
   exit 1
 fi
@@ -86,7 +86,7 @@ if test ! -s ${INPUT_BAM_FILE_4_INDEL_CHECK}
 then
   if [ $DEBUG_LEVEL -gt 0 ]
   then
-  echo "Fail to find the input indel file ${INPUT_BAM_FILE_4_INDEL_CHECK}"
+  echo "Fail to find the input indel file ${INPUT_BAM_FILE_4_INDEL_CHECK} for merge_confidence" >> $LOG
   fi
   exit 1
 fi
@@ -98,7 +98,7 @@ then
 fi
 if [ $DEBUG_LEVEL -gt 0 ]
   then
-  echo "create indel list in merge_confidence_file"
+  echo "create indel list in merge_confidence_file" >> $LOG
 fi
 grep -v SNP ${INPUT_BAM_FILE_4_INDEL_CHECK}  |awk '{for(i=0-$5; i<=$5; ++i) printf("%s.%ld\n", $2, $3+i)}' |sort -u >${INDEL_LIST}
 
@@ -117,22 +117,28 @@ echo ${LOW_CONFIDENCIDE_FILE} >>input_file.lst
 echo ${HIGH_CONFIDENCE_FILE}.repeat >>input_file.lst
 
 for j in `cat input_file.lst`; do
-  echo ${j}
-  i=${INPUT_DIR4_LOW_QUALITY_CALL}/${j}
+  if [ $DEBUG_LEVEL -gt 0 ]
+then
+echo ${j} >> $LOG
+fi
+i=${INPUT_DIR4_LOW_QUALITY_CALL}/${j}
   if [ $DEBUG_LEVEL -gt 0 ]
   then
-  echo $i
-  echo "filter existing records"
+  if [ $DEBUG_LEVEL -gt 0 ]
+then
+echo $i >> $LOG
+fi
+echo "filter existing records"
   echo "${FIND_SUB} -i ${i} -c hq_snp.lst -t 0 -d '\t' -n 0 -o ${i}.new"
   fi
   ${FIND_SUB} -i ${i} -c hq_snp.lst -t 0 -d '\t' -n 0 -o ${i}.new
   if test -s ${i}.new
   then
 ## clean-up dbSNP
-    if [ $DEBUG_LEVEL -gt 0 ]
-  then
-  echo "filter dbSNP"
-  fi
+  if [ $DEBUG_LEVEL -gt 0 ]
+then
+echo "filter dbSNP" >> $LOG
+fi
     ${FIND_SUB} -i ${i}.new -c ${DB_SNP_SNV_LIST} -t 0 -d '\t' -n 0 -o ${i}.new.2
     rm ${i}.new
     mv ${i}.new.2 ${i}.new
@@ -141,7 +147,7 @@ for j in `cat input_file.lst`; do
     then
       if [ $DEBUG_LEVEL -gt 0 ]
   then
-  echo "filter indel"
+  echo "filter indel" >> $LOG
   fi
       ${FIND_SUB} -i ${i}.new -c ${INDEL_LIST} -t 0 -d '\t' -n 0 -o ${i}.new.2
       rm ${i}.new
@@ -157,9 +163,9 @@ for j in `cat input_file.lst`; do
         original_count=`wc ${INPUT_DIR4_HIGH_QUALITY_CALL}/${j} |awk '{printf("%s", $1)}'`
         if [ $DEBUG_LEVEL -gt 0 ]
   then
-        echo "original_count=${original_count} new_count=${new_count}"
-        echo "cat ${INPUT_DIR4_HIGH_QUALITY_CALL}/${j} ${i}.new.2"
-        echo "OUTPUT file=${OUTPUT_DIR}/${j}"
+        echo "original_count=${original_count} new_count=${new_count}" >> $LOG
+        echo "cat ${INPUT_DIR4_HIGH_QUALITY_CALL}/${j} ${i}.new.2" >> $LOG
+        echo "OUTPUT file=${OUTPUT_DIR}/${j}" >> $LOG
         fi
         cat ${INPUT_DIR4_HIGH_QUALITY_CALL}/${j} ${i}.new.2 >${OUTPUT_DIR}/${j}
       fi

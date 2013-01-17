@@ -15,7 +15,7 @@ FIND_SUB=$SCRIPT_DIR/FindSub.pl
 HIGH_BAM_FILE=${SAMPLE_NAME}_bam_high_20.out
 if test ! -s ${HIGH_BAM_FILE}
 then
-  if [ $DEBUG_LEVEL -gt 0 ]
+  if [ $DEBUG_LEVEL > 0 ]
 then
 echo "Fail to find the bam file with high quality new results: ${HIGH_BAM_FILE} in add_refSNP2low_bam" >> $LOG
 fi
@@ -25,7 +25,7 @@ fi
 LOW_BAM_SNP_FILE=${SAMPLE_NAME}_bam_low.out
 if test ! -s ${LOW_BAM_SNP_FILE}
 then
-  if [ $DEBUG_LEVEL -gt 0 ]
+  if [ $DEBUG_LEVEL > 0 ]
 then
 echo "Fail to find low-quality compute data ${LOW_BAM_SNP_FILE} in add_refSNP2low_bam" >> $LOG
 fi
@@ -34,7 +34,7 @@ fi
 grep rs ${LOW_BAM_SNP_FILE} |grep SNP >rs.lst
 if test -s rs.lst
 then
- if [ $DEBUG_LEVEL -gt 0 ]
+ if [ $DEBUG_LEVEL > 0 ]
 then
 echo "Low bam already had dbSNP" >> $LOG
 fi
@@ -49,7 +49,7 @@ fi
 grep rs ${HIGH_BAM_FILE} |grep SNP |awk '{printf("%s\t%s\n", $1, $NF)}' |sort +0 -1 >rs_high.sort
 if test ! -s rs_high.sort #if the file is empty
 then
- if [ $DEBUG_LEVEL -gt 0 ]
+ if [ $DEBUG_LEVEL > 0 ]
 then
 echo "If you see this, rs_high.sort is empty in add_refSNP2low_bam, meaning no rs found in ${HIGH_BAM_FILE}" >> $LOG #There were no real SNPs in the given HIGH_BAM_FILE - none of them were in dbSNP
 fi

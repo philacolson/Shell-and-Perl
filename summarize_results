@@ -9,13 +9,13 @@ OUTPUT_FILE=$4
 ## generate summary SNPs for snps and genotypes
 if test ! -s ${INPUT_SUMMARY_SNP_FILE}
 then
-  echo "Fail to find somatic_xx_sum.txt file ${INPUT_SUMMARY_SNP_FILE}"
+  echo "Fail to find somatic_xx_sum.txt file ${INPUT_SUMMARY_SNP_FILE} for summarize" >> $LOG
   exit 1
 fi
 
 if test ! -s ${INPUT_GENE_LIST_FILE}
 then
-  echo "Fail to find file ${INPUT_GENE_LIST_FILE}"
+  echo "Fail to find file ${INPUT_GENE_LIST_FILE} for summarize" >> $LOG
   exit 1
 fi
 
@@ -40,7 +40,7 @@ if test ! -s ${SNP_INFO_SUM}
 then
   if [ $DEBUG_LEVEL -gt 0 ]
     then
-  echo "Fail to creat the snp summary file ${SNP_INFO_SUM} after ${SUMMARY_PROGRAM} ${DATE_FLAG} `pwd` ${INPUT_GENE_LIST_FILE}"
+  echo "Fail to creat the snp summary file ${SNP_INFO_SUM} after ${SUMMARY_PROGRAM} ${DATE_FLAG} `pwd` ${INPUT_GENE_LIST_FILE}" >> $LOG
   fi
   exit 1
 fi
@@ -49,7 +49,7 @@ if test ! -s ${GENOTYPE_INFO_SUM}
 then
   if [ $DEBUG_LEVEL -gt 0 ]
     then
-  echo "Fail to create the genotype summary file ${GENOTYPE_INFO_SUM} after ${SUMMARY_PROGRAM} ${DATE_FLAG} `pwd` ${INPUT_GENE_LIST_FILE}"
+  echo "Fail to create the genotype summary file ${GENOTYPE_INFO_SUM} after ${SUMMARY_PROGRAM} ${DATE_FLAG} `pwd` ${INPUT_GENE_LIST_FILE}" >> $LOG
   fi
   exit 1
 

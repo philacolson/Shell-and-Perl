@@ -16,41 +16,22 @@ FILTER_DBSNP=$SCRIPT_DIR/filter_low_quality_dbSNP_4_tier1
 
 
 ##EXCEL_ROOT_DIR=/nfs_exports/linux-file1/home/naevegrp/jzhang2/NextGen/PCGP
-EXCEL_ROOT_DIR=$6
+EXCEL_ROOT_DIR=$8
 
 LOG=${BAM_DIR}/${INPUT_SAMPLE}_LOG.txt
 echo $DEBUG_LEVEL >> $LOG
 `cat $LOG`
 #reimplement below if we want a list of them to be entered
-#for i in `cat ${INPUT_SAMPLE}`; do
-  if test ! -d ${EXCEL_ROOT_DIR}/${INPUT_SAMPLE} #if there is no directory for the SNP
-  then
-	if [ $DEBUG_LEVEL -gt 1 ]
-	then 
-  echo "INFO: no dir for ${EXCEL_ROOT_DIR}/${INPUT_SAMPLE}, making directory." >> $LOG
-	fi
-    mkdir -p ${EXCEL_ROOT_DIR}/${INPUT_SAMPLE}
-    #exit 1
-  fi
-done
-
-if [ $DEBUG_LEVEL -gt 2 ]
-then 
-echo "DEBUG: created EXCEL directories." >> $LOG
-fi
-#again, below is for if we want to make a list instead of a single input
-#for i in `cat ${INPUT_SAMPLE}`; do
-  ##echo $i
-  cp ../${INPUT_SAMPLE}_G_bam.out .
-  cp ../${INPUT_SAMPLE}_bam_low.out ${INPUT_SAMPLE}_bam_low.out
-  cp ../${INPUT_SAMPLE}_bam_high_20.out ${INPUT_SAMPLE}_bam_high_20.out
-if [ $DEBUG_LEVEL -gt 2 ]
-	then echo "DEBUG:  ${SCRIPT_DIR}/run_somatic_mutation_analysis ${INPUT_SAMPLE} no_false_snp" >> $LOG
-	fi
+HIGH_SNP_OUT=$5
+LOW_SNP_OUT=$6
+GERM_SNP_OUT=$7
+cp $HIGH_SNP_OUT ./
+cp $LOW_SNP_OUT ./
+cp $GERM_SNP_OUT ./
   #hq
   #D_BAM=`ls ${BAM_DIR}/${INPUT_SAMPLE}_D*.bam`
   #G_BAM=`ls ${BAM_DIR}/${INPUT_SAMPLE}_G*.bam`
-  ${SCRIPT_DIR}/run_somatic_mutation_analysis ${i} no_false_snp ${D_BAM_FILE} ${G_BAM_FILE} ${DEBUG_LEVEL} ${LOG}
+ ${SCRIPT_DIR}/run_somatic_mutation_analysis $SAMPLE  no_false_snp `basename ${LOW_SNP_OUT}` `basename ${GERM_SNP_OUT}` `basename ${HIGH_SNP_OUT}` ${D_BAM} ${G_BAM} ${DEBUG_LEVEL} ${LOG}
 #done
 if [ $DEBUG_LEVEL -gt 2 ]
 	then

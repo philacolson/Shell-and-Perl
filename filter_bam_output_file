@@ -7,7 +7,8 @@ lowBAMSnpFile=$1  ## this is for use of low-quality qual=10 analysis
 HighBAMFile=$2
 OUTPUT_FILE=$3  ## the output file will retain only the markers found in both INPUT_FILE_from_HighThreshold and lowBAMSnpFile
 # FIXME I see no file called INPUT_FILE_from_HighThreshold
-
+DEBUG_LEVEL=$4
+LOG=$5
 
 
 

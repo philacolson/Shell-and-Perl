@@ -18,7 +18,7 @@ PValue_cutoff=0.1
 ## PValue_cutoff=0.05
 if [ $DEBUG_LEVEL -gt 0 ]
 then
-echo "INFO: P-Value Cutoff is ${PValue_cutoff}" >> $LOG_PATH/log.txt
+echo "INFO: P-Value Cutoff is ${PValue_cutoff}" >> $LOG
 fi
 
 ## need to do the export for running FisherTest
@@ -27,7 +27,7 @@ export PERL5LIB=${NEXTGEN_BIN_ROOT_DIR}/MikePerl/FishPerl/Text-NSP-1.11
 if test ! -s ${INPUT_SNP_FIND_FILE}
 then
 if [ $DEBUG_LEVEL -gt 0 ]
-  echo "WARNING: Fail to find SNPFind output file ${INPUT_SNP_FIND_FILE}">>$LOG_PATH/log.txt
+  echo "WARNING: Fail to find SNPFind output file ${INPUT_SNP_FIND_FILE} in find_single_strand">> $LOG
   fi 
   exit 1
 fi
@@ -43,7 +43,7 @@ fi
 ## Name    alternative_tumor_count ($18), reference_tumor_count ($16), alternative_normal_count ($17), and reference_normal_count ($15)
 if [ $DEBUG_LEVEL -gt 0 ]
 then
-echo "DEBUG About to attempt Fisher Test"
+echo "DEBUG About to attempt Fisher Test" >> $LOG
 fi
 grep SNP ${INPUT_SNP_FIND_FILE} \ #find every "SNP" in the inputted SNP file
 | awk '$29 == 0 { print }' \ #If there is both an alternative fwd and reverse count, it has alternative bi-directional confirmation. This means that the fisher test can be run 

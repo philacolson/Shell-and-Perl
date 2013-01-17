@@ -5,11 +5,11 @@ G_BAM_FILE=$3
 ##BAM_DIR=/nfs_exports/genomes/1/PCGP/BucketRaw/${DISEASE_CODE}
 #BAM_DIR=/user/songliu/u2/group/Qiang/Exome/bladder_output/${DISEASE_CODE}
 BAM_DIR=$4
-DEBUG_LEVEL=$5
+DEBUG_LEVEL=$9
 #Debug level can be 1-3, increasing with verbosity.  As a general rule, the grades pertain to the following: 1 just logs fatal events and ones that otherwise prematurely end the code, 2 mentions anything that deviates from expected code/error handler code is run, or other noteworthly events.  3 logs variable names before and after programs are run, and upon initialization.  Higher numbers post their description + any number's description lower than their own.  For example, a debug level of 2 would post every log statement that is not a level 3 log event.  It would post 1's, and 2's.
 
 ##SCRIPT_DIR=/nfs_exports/apps/internal/scripts
-SCRIPT_DIR=/user/songliu/u2/group/Qiang/Exome/scripts/snp_postprocess/snv_postprocess
+SCRIPT_DIR=~/Desktop/Shell-and-Perl-master
 
 
 FILTER_DBSNP=$SCRIPT_DIR/filter_low_quality_dbSNP_4_tier1 
@@ -31,7 +31,7 @@ cp $GERM_SNP_OUT ./
   #hq
   #D_BAM=`ls ${BAM_DIR}/${INPUT_SAMPLE}_D*.bam`
   #G_BAM=`ls ${BAM_DIR}/${INPUT_SAMPLE}_G*.bam`
- ${SCRIPT_DIR}/run_somatic_mutation_analysis $SAMPLE  no_false_snp `basename ${LOW_SNP_OUT}` `basename ${GERM_SNP_OUT}` `basename ${HIGH_SNP_OUT}` ${D_BAM} ${G_BAM} ${DEBUG_LEVEL} ${LOG}
+ ${SCRIPT_DIR}/run_somatic_mutation_analysis $INPUT_SAMPLE no_false_snp `basename ${LOW_SNP_OUT}` `basename ${GERM_SNP_OUT}` `basename ${HIGH_SNP_OUT}` ${D_BAM} ${G_BAM} ${DEBUG_LEVEL} ${LOG}
 #done
 if [ $DEBUG_LEVEL -gt 2 ]
 	then

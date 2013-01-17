@@ -29,7 +29,7 @@ if test ! -s ${INPUT_GENE2CHR_LIST}
 then
 if [ $DEBUG_LEVEL -gt 0 ]
 then
-  echo "Fail to find the gene2chr file ${INPUT_GENE2CHR_LIST}"
+  echo "Fail to find the gene2chr file ${INPUT_GENE2CHR_LIST}" >> $LOG
   fi
 exit 1
 fi
@@ -38,7 +38,7 @@ if test ! -d ${GENE_EXON_DIR}
 then
 if [ $DEBUG_LEVEL -gt 0 ]
 then
-  echo "Fail to find the gene2exon dir ${GENE_EXON_DIR}"
+  echo "Fail to find the gene2exon dir ${GENE_EXON_DIR}" >> $LOG
   fi
 exit 1
 fi
@@ -51,7 +51,7 @@ for i in `cat ${INPUT_GENE2CHR_LIST}_chr.lst`; do
   then
 if [ $DEBUG_LEVEL -gt 0 ]
 then
-    echo "Fail to find region ${GENE_EXON_DIR}/${i}_region.txt"
+    echo "Fail to find region ${GENE_EXON_DIR}/${i}_region.txt" >> $LOG
   fi
 else
     grep $i$ ${INPUT_GENE2CHR_LIST} |cut -f1 -d"|" |sort -u >current_gene.lst
@@ -87,7 +87,7 @@ else
         then
           if [ $DEBUG_LEVEL -gt 0 ]
           then
-          echo "Fail in ${PRT_SEQLOC} -i seqloc.lst -d ./ -b T for ${GeneName}"
+          echo "Fail in ${PRT_SEQLOC} -i seqloc.lst -d ./ -b T for ${GeneName}" >> $LOG
           fi
         exit 1
         fi
@@ -98,7 +98,8 @@ else
         if test ! -s ${GENE_NAME}.seq
         then
          if [ $DEBUG_LEVEL -gt 0 ]
-then echo "Fail to get sequence for prt_seqloc -i seqloc.lst -d ./ -b T for ${GeneName}"
+then 
+echo "Fail to get sequence for prt_seqloc -i seqloc.lst -d ./ -b T for ${GeneName}" >> $LOG
       fi
 echo "Fail to get sequence for prt_seqloc -i seqloc.lst -d ./ -b T for ${GeneName}" >>${ERR_REPORT_FILE}
 

@@ -1,0 +1,11 @@
+#find_single_strand_coverage pseudocode
+
+Establish P-Value cutoff
+
+export PERL5LIB=${NEXTGEN_BIN_ROOT_DIR}/MikePerl/FishPerl/Text-NSP-1.11
+
+Clear any output file with the same name
+
+Grep all "SNP" from the input file, print them, get columns 3, 21,22,25,26,
+'{if($2+$4 >0 && $3+$5>0) printf("%s\t%s\t%s\t%s\t%s\n", $1, $4, $2, $5, $3)}'
+Fisher test those, take the results where the value is < P-Value and output them

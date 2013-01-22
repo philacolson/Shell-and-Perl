@@ -1,0 +1,15 @@
+PC_filter_bam_output_file
+
+#UNSURE OF IMPORTS, careful
+
+grep "SNP" from the low_bam_snp_file, cut out the first column, sort -u, and put it in low_snp.lst
+
+grep "SNP" from high_bam_file and put it in the file High_bam_file.snp
+#This step cannot be combined, we need the output of the first file by itself in about 5 lines.
+cut the first column out of High_bam_file.snp, sort -u, call it high_snp.lst
+
+combine high_snp.lst and low_snp.lst, sort, uniq -d, call it high_N_low_snp.lst #Not immediately used, don't worry.
+
+Union the files from High_bam_file.snp and low_snp.lst and call it the output file.
+
+remove High_bam_file.snp

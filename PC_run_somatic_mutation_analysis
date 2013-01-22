@@ -1,0 +1,154 @@
+#run_somatic_mutation_analysis pseudocode
+
+#IMPORT STATEMENTS (depending on location, coffee, tobacco, sugar)
+
+#Make sure import statements worked
+
+#FIND_SINGLE_STRAND_COVERAGE HIGH/LOW
+
+#using line 144, run_somatic_mutation analysis, create list of skippable SINGLE strands and denote them as bad. (because this is cancer, it's important to skip stuff)
+
+#this next part will be easy to screw up, so i'm copying it. Lines 150 to 154
+cat ${SAMPLE_NAME}_high_single_strand_SNV.lst skip_single_strand.lst |sort |uniq -d >d  
+
+cat d ${SAMPLE_NAME}_high_single_strand_SNV.lst |sort |uniq -u >u
+
+mv u ${SAMPLE_NAME}_high_single_strand_SNV.lst 
+
+combine high and low to create master single_strand list
+
+grab specific columns from high, low, and germline 
+
+ADD_REFSNP2LOW_BAM
+
+{COMPUTE_LOW_SOMATIC_SNP}
+  FILTER_BAM_OUTPUT_FILE
+	make sure it has entries
+
+	JAVA ADDOMIMdbSNP
+
+	extract the SNPs from the HIGH bam file
+
+	subtract the high snps from high_N_low_snp to get Low snps #double check that THIS is what happens.  It seems very hand-wavey for such a simple thing.
+
+		if there ARE any low snps from the High bam file (bad filters, maybe)
+line 244
+		save any matched to the HIGH_BAM_FILE and add them to the LOW_BAM_SNP_FILE
+
+		COLLECT_SUB_SOMATIC_SNP #We'll deal with what the params are when we get to it
+
+		move *confidence files to a separate folder with the fisher_output
+{END of COMPUTE_LOW_SOMATIC_SNP}
+
+{COMPUTE_HIGH_SOMATIC_SNP}
+	
+	high_single_strand_snv -> single_strand_snv.lst
+
+	COLLECT_SUB_SOMATIC_SNP
+
+{END of COMPUTE_HIGH_SOMATIC_SNP}
+
+{Copy_merged_file}
+
+	copy files from temp4 to the current directory
+
+{END of Copy_merged_file}
+
+{ANNOTATE_PUTATIVE_MUTATION}
+
+	ANNOTATE_PUTATIVE_SOMATIC_MUTATION
+	
+	ensure *_validate_somatic_loci.txt exists
+
+	Extract the uniq entries from *validate_somatic_loci.txt and sort them 
+line 335
+
+	ensure *_sub_sum.txt exists
+
+	grab everything that has "Gene" in sub_sum.txt and put it in sub_sum.txt.sort
+	grab everything that DOESN'T have Gene in sub_sum.txt, sort -u it, and append it to sub_sum.txt.sort
+	*sub_sum.txt.sort now is *sub_sum.txt
+
+{RUN_GENE_ANNOTATION}
+
+	#the steps in here are "prepare_gene_Name2geneID", "make_gene_fasta", "generate_TCGA_sequence", "map_all_somatic_mutation", and "summarize_results"
+
+	wipe any residual *_putative_somatic_mutation.txt file
+
+	FILTER_DUPLICATE_SOMATIC_MUTATION_FILE
+
+		ensure output occured
+
+	rename *_putative_somatic_mutation.txt.mod to *_putative_somatic_mutation.txt
+	line 410
+{END of RUN_GENE_ANNOTATION}
+
+{CREATE_EXCEL_SHEET}
+
+copies putative_somatic_mutation.txt to *_tier1_putative_mutation.txt
+
+runs the java program TabToExcel.jar
+
+{END of CREATE_EXCEL SHEET}
+
+{ANNOTATE_LOWTIER_SOMATIC_MUTATION}
+
+	ANNOTATE_LOWTIER_SOMATIC_MUTATION
+
+{END of ANNOTATE_LOWTIER_SOMATIC_MUTATION}
+
+{MODIFY_SJLLQ}
+
+
+	ensure *_low_confidence_somatic_snp.txt.new.2 exists
+
+	chop up and get columns 2 and 3 from temp3/*.low_confidence_somatic_snp.txt.new.2 and put it in LL_snp.lst
+
+	wipe any residual LQ_snp.lst
+
+	Chop up and get columns 2 and 3 from temp3/*_high_confidence_somatic_snp.txt.new.2 > LQ_snp.lst
+
+	for (int i = 1; i != 4; i++)
+	{
+	 search for LL_snp.lst in *_tier{i}_putative_mutation.txt and put it in LL_snp.lst.out
+
+	 wipe any residual LQ_snp.lst.out
+
+	 search for LQ_snp.lst from *tier{i}_putative_mutation.txt and put it in *_tier{i}_putative_mutation.txt.clean
+	 in LQ_snp_lst.out, Find/Replace SJHQ with SJHLQ and place in *tier{i}_putative_mutation.txt.clean
+
+	 rename *tier{i}_putative_mutation.txt.clean to tier{i}_putative_mutation.txt
+
+	 if there are any entries in *_tier{i}_putative_mutation.txt
+
+	 	FILTER_DUPLICATE_SOMATIC_MUTATION_FILE
+
+	 	ensure it spit something out
+
+	 	rename the output file to *_tier{i}_putative_mutation.txt
+	 }
+run the Java file TabToExcel.jar
+
+compile all the *confidence* files, extract the RS ones, cut 2 and 3 columns, sort -u, put them in rs_num.lst
+
+Search for everything that DOESN'T have GeneName in *tier1_putative_mutation.txt,those that have less than <=5 mutant alleles in tumor or germline total <=10, add to rs_num.lst
+
+grab $4 and $5 from *_tier1_putative_mutation.txt, take the column 1, sort -u, put in k.lst
+
+UNION the Low_bam_snp_file with k.lst with output of k.lst.out
+UNION the HIGH_BAM_FILE with k.lst with the output of k2.lst.out
+
+combine the two k lists, get columns 2, 3, 9, 18, sort -u, awk $1 $2 $3 1-$4, sed /^chr/s/// >${SAMPLE_NAME}_SNV_check.lst
+
+spit out "xxx|xxx xxx" to check.lst
+add *_SNV_check.lst to check.lst
+
+awk '{FS="|"; printf("chr%s\t%s\t", $1, $2); print $0}' check.lst |grep -v xxx >kkk
+fgrep -f rs_num.lst kkk |cut -f3 |sed /$/s//\|0/ >${SAMPLE_NAME}_check.mod
+fgrep -f rs_num.lst -v kkk |cut -f3 |sed /$/s//\|1/ >>${SAMPLE_NAME}_check.mod
+
+change *_check.mod to *_tier1_check.lst
+
+remove *_SNV_check.lst
+
+done

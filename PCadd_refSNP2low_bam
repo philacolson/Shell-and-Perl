@@ -1,0 +1,23 @@
+PC_add_refSNP2low_bam
+
+Grab the High_bam_file.out and the Bam_low.out
+
+Grep all the "rs" entries from Bam_low.out and put them in rs.lst
+
+if there is anything in rs.lst, exit out, as it has already been annotated
+
+remove anything called rs_high.sort
+
+Grep all the "rs" entries from High_bam_file.out, grep the SNPs from that, grab the first and last columns, sort them, and put the end result in rs_high.sort
+
+if it's empty, that's bad.  Exit.
+
+sort the Bam_low.out and put it in low.sort
+
+Join low.sort and rs_high.sort and print every line to Bam_low.out.temp
+
+cut the first column out of that and put it in low_match.lst
+
+using all the entries from Bam_low.out.temp, see if the match anywhere with low_match.lst.  If they do, throw them away.  If not, keep them and put them in low_left.out
+
+Combine low_left.out with Bam_low.out.temp and call it the original file, Bam_low.out
